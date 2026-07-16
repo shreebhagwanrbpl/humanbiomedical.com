@@ -4,6 +4,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import GetQuoteForm from "@/components/GetQuoteForm";
 import "../product-details.css";
+import ProductGallery from "./ProductGallery";
 export async function generateMetadata({
   params,
 }) {
@@ -24,7 +25,8 @@ export async function generateMetadata({
     : [];
 
   const product = products.find(
-    (item) => item.slug === slug
+    (item) =>
+      item.title === decodeURIComponent(slug)
   );
 
   if (!product) {
@@ -34,33 +36,37 @@ export async function generateMetadata({
         "The requested product could not be found.",
     };
   }
-
   const location = district
-    ? district
+    ? district.charAt(0).toUpperCase() + district.slice(1)
     : "India";
-
   const url = district
     ? `https://qlyte.com/${district}/products/${slug}`
     : `https://qlyte.com/products/${slug}`;
 
   return {
-    title: `${product.title} Supplier in ${location} | Buy ${product.title} Online | Qlyte`,
+    title: `${product.title} Supplier in ${location} | Dealer, Distributor & Exporter | Qlyte`,
 
     description: `Buy ${product.title} in ${location}. Trusted supplier of electrolyte analyzer reagents for hospitals, pathology labs, diagnostic centres and healthcare facilities across India.`,
 
     keywords: [
       product.title,
+      `${product.title} supplier in ${location}`,
+      `${product.title} dealer in ${location}`,
+      `${product.title} manufacturer in ${location}`,
+      `${product.title} exporter in ${location}`,
+      `${product.title} price in ${location}`,
+      `Buy ${product.title} in ${location}`,
+      `${product.title} near me`,
       `${product.title} supplier`,
-      `${product.title} in ${location}`,
-      `${product.title} in India`,
-      `Buy ${product.title}`,
-      `Electrolyte in ${location}`,
-      `Electrolyte Analyzer Reagents`,
-      `Diagnostic Laboratory Reagent`,
-      `Hospital Lab Reagent`,
-      `Pathology Lab Reagent`,
-      `Medical Equipment Supplier`,
       `Electrolyte Reagent Supplier`,
+      `Electrolyte Analyzer Reagent`,
+      `Clinical Chemistry Reagent`,
+      `Laboratory Reagent Supplier`,
+      `Hospital Lab Reagent`,
+      `Diagnostic Reagent Supplier`,
+      `${location} Medical Supplier`,
+      `${location} Pathology Lab Supplier`,
+      `${location} Diagnostic Equipment Supplier`,
     ],
 
     alternates: {
@@ -134,7 +140,8 @@ export default async function ProductPage({
     : [];
 
   const product = products.find(
-    (item) => item.slug === slug
+    (item) =>
+      item.title === decodeURIComponent(slug)
   );
 
   if (!product) {
@@ -179,21 +186,60 @@ export default async function ProductPage({
         <div className="product-grid">
 
           {/* Image */}
-          <div className="product-image-box">
+          {/* <div className="product-image-box">
+
             <img
               src={
-                typeof product.image ===
-                  "string" &&
-                  product.image.startsWith(
-                    "http"
-                  )
-                  ? product.image
-                  : "/images/products/default.webp"
+                product.images?.[0] ||
+                product.image ||
+                "/images/products/default.webp"
               }
               alt={product.title}
             />
-          </div>
 
+            {(product.images?.length > 1 ||
+              product.video ||
+              product.pdf) && (
+
+                <div className="media-gallery">
+
+                  {product.images?.map((img, index) => (
+                    <img
+                      key={index}
+                      src={img}
+                      alt={`${product.title}-${index}`}
+                      className="thumb-image"
+                    />
+                  ))}
+
+                  {product.video && (
+                    <a
+                      href={product.video}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="media-btn"
+                    >
+                      🎥 Watch Video
+                    </a>
+                  )}
+
+                  {product.pdf && (
+                    <a
+                      href={product.pdf}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="media-btn"
+                    >
+                      📄 Product PDF
+                    </a>
+                  )}
+
+                </div>
+
+              )}
+
+          </div> */}
+          <ProductGallery product={product} />
           {/* Content */}
           <div className="product-content">
 
@@ -291,7 +337,75 @@ export default async function ProductPage({
           </p>
 
         </div>
+        <div className="seo-content">
 
+          <h2>
+            {product.title} Supplier in {district || "India"}
+          </h2>
+
+          <p>
+            Qlyte is a trusted supplier of {product.title} in {district || "India"}.
+            We provide premium quality electrolyte analyzer reagents for hospitals,
+            pathology laboratories, diagnostic centres and healthcare institutions.
+          </p>
+
+          <h2>
+            Why Choose Our {product.title} in {district || "India"}
+          </h2>
+
+          <p>
+            Our {product.title} is designed for accurate and reliable performance.
+            Laboratories across {district || "India"} trust our products for
+            consistent results, longer shelf life and compatibility with leading
+            analyzer systems.
+          </p>
+
+          <h2>
+            Trusted {product.title} Dealer in {district || "India"}
+          </h2>
+
+          <p>
+            We are a reputed dealer and supplier of {product.title} in
+            {district || "India"} offering genuine products, technical support
+            and fast delivery services.
+          </p>
+
+          <h2>
+            Applications of {product.title}
+          </h2>
+
+          <ul>
+            <li>Hospitals</li>
+            <li>Pathology Laboratories</li>
+            <li>Diagnostic Centres</li>
+            <li>Medical Colleges</li>
+            <li>Research Laboratories</li>
+            <li>Healthcare Institutions</li>
+          </ul>
+
+          <h2>
+            FAQ - {product.title} in {district || "India"}
+          </h2>
+
+          <h3>
+            What is {product.title} used for?
+          </h3>
+
+          <p>
+            {product.title} is used for electrolyte testing and laboratory
+            diagnostic applications.
+          </p>
+
+          <h3>
+            Do you provide delivery in {district || "India"}?
+          </h3>
+
+          <p>
+            Yes, we provide delivery and support services across
+            {district || "India"}.
+          </p>
+
+        </div>
       </div>
     </section>
   );

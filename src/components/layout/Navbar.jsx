@@ -36,7 +36,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg shadow-sm">
+    <header className="fixed top-0 left-0 right-0 z-[9999] bg-white/95 backdrop-blur-lg shadow-md">
       <nav className="container-custom flex items-center justify-between py-4">
 
         {/* Logo */}

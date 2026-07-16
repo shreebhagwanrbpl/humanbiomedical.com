@@ -20,7 +20,6 @@ export default function Products({ districtData }) {
 
         if (snap.exists()) {
           const allProducts = snap.data().products || [];
-
           const publishedProducts = allProducts.filter(
             (item) => item.isPublished,
           );
@@ -55,12 +54,17 @@ export default function Products({ districtData }) {
             {products.map((item) => (
               <div className="product-card-page" key={item.id}>
                 <img
-                  src={item.image}
+                  src={
+                    item.images?.length
+                      ? item.images[0]
+                      : item.image || "/no-image.png"
+                  }
                   alt={`${item.title} Supplier in ${location}`}
                 />
 
                 <div className="card-content">
                   <h3>{item.title}</h3>
+
                   <h4>
                     Brand: <span>{item.brand}</span>
                   </h4>
@@ -71,11 +75,7 @@ export default function Products({ districtData }) {
 
                   {/* <Link href={`/products/${item.slug}`} className="more-btn"> */}
                   <Link
-                    href={
-                      district
-                        ? `/${district}/products/${item.slug}`
-                        : `/products/${item.slug}`
-                    }
+                    href={`/products/${encodeURIComponent(item.title)}`}
                     className="more-btn"
                   >
                     View Details
