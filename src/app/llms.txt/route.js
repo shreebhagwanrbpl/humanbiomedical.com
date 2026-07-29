@@ -5,6 +5,14 @@ const WEBSITE = "humanbiomedicalcom";
 const DOMAIN = "https://humanbiomedical.com";
 
 export async function GET() {
+    if (!adminDb) {
+        return new NextResponse(
+            "Firebase Admin is not configured.",
+            {
+                status: 503,
+            }
+        );
+    }
     try {
         // Districts
         const districtSnap = await adminDb

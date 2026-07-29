@@ -258,6 +258,7 @@ PRODUCT LAYOUT
   gap: 40px;
   align-items: start;
   margin-top: 40px;
+  /* Binds height so sticky sidebar stays sticky even on short pages */
 }
 
 
@@ -276,7 +277,7 @@ SIDEBAR
   top: 110px;
 
   align-self: start;
-  height: calc(100vh - 130px);
+  height: fit-content;
   max-height: calc(100vh - 130px);
   width: 100%;
   display: flex;
@@ -285,59 +286,49 @@ SIDEBAR
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 30px;
-  padding: 28px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, .08);
+  padding: 22px;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.05);
 }
 
 .category-sidebar-header {
   flex-shrink: 0;
   background: #fff;
-  z-index: 2;
+  z-index: 5;
 }
 
 .category-sidebar-body {
   flex: 1;
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 .category-sidebar-body::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
-
-
 .category-sidebar-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #e2e8f0;
   border-radius: 20px;
 }
 
-.category-sidebar::-webkit-scrollbar {
-  width: 6px;
+.category-sidebar-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.products-content {
-  min-height: 100%;
+.category-sidebar::-webkit-scrollbar {
+  width: 5px;
 }
+
 
 .category-sidebar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #e2e8f0;
   border-radius: 20px;
 }
 
 .category-sidebar h3 {
-  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 20px;
-}
-
-.category-sidebar input {
-  width: 100%;
-  height: 50px;
-  border: 1px solid #dbeafe;
-  border-radius: 14px;
-  padding: 0 16px;
-  margin-bottom: 20px;
+  color: #1e293b;
 }
 
 .category-sidebar button {
@@ -357,6 +348,8 @@ RIGHT SIDE
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
   transition: .3s;
+  scroll-margin-top: 130px;
+  /* Offset for the sticky navbar and headers when scrolling to product */
 }
 
 .category-product-card:hover {
@@ -393,6 +386,7 @@ RESPONSIVE
 @media(max-width:1024px) {
 
   .products-layout {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
   }
@@ -449,62 +443,153 @@ RESPONSIVE
   position: relative;
 }
 
+/* ===========================
+SIDEBAR CATEGORY STICKY SCROLL
+=========================== */
+
+.sidebar-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .sidebar-category {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: visible;
+  /* Must be visible for nested sticky children */
+}
+
+.sidebar-category:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.sidebar-category.is-open {
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 16px rgba(15, 108, 189, 0.05);
 }
 
 .sidebar-category-header {
   position: sticky;
   top: 0;
-  z-index: 5;
-  background: #fff;
-}
-
-.sidebar-subcategory-list {
-  overflow: visible;
-}
-
-.sidebar-subcategory-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-subcategory-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 20px;
-}
-
-.sidebar-categories {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.sidebar-category {
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-category-header {
+  z-index: 10;
+  height: 54px;
   flex-shrink: 0;
+  background: #fff;
+  border-radius: 15px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-category.is-open .sidebar-category-header {
+  border-radius: 15px 15px 0 0;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .sidebar-subcategory-list {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fafbfe;
+  border-radius: 0 0 15px 15px;
+  overflow: visible;
+  /* Must be visible for nested sticky children */
+  padding: 6px 0;
 }
 
 .sidebar-subcategory {
+  display: flex;
+  flex-direction: column;
   position: relative;
+  overflow: visible;
+  /* Must be visible for nested sticky children */
 }
 
 .sidebar-subcategory-header {
   position: sticky;
-  top: 0px;
-  /* ya 44px bhi try kar sakte ho */
-  z-index: 6;
-  background: #f8fafc;
-  margin-top: 0;
+  top: 54px;
+  /* Sticks exactly below the 54px category header */
+  z-index: 9;
+  height: 44px;
+  background: rgba(250, 251, 254, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.sidebar-subcategory:first-child .sidebar-subcategory-header {
+  border-top: none;
 }
 
 .sidebar-product-list {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  border-left: 2px solid #e2e8f0;
+  margin-left: 32px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.sidebar-product-item {
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-product-item:hover {
+  color: #0f6cbd;
+  background-color: #f1f5f9;
+}
+
+.sidebar-product-item .sidebar-product-dot {
+  transition: all 0.2s ease;
+}
+
+.sidebar-product-item:hover .sidebar-product-dot {
+  background-color: #0f6cbd;
+  transform: scale(1.2);
+}
+
+/* ===========================
+SKELETON SHIMMER LOADER
+=========================== */
+
+.skeleton-item {
+  position: relative;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.skeleton-item::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.4) 20%,
+      rgba(255, 255, 255, 0.6) 60%,
+      rgba(255, 255, 255, 0) 100%);
+  animation: shimmer 1.6s infinite;
+  content: '';
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Sidebar Skeleton overrides */
+.skeleton-sidebar-container {
+  pointer-events: none;
 }

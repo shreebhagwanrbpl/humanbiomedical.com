@@ -1,33 +1,156 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import GetQuoteForm from "@/components/GetQuoteForm";
 import "../product-details.css";
 import ProductGallery from "./ProductGallery";
+
+const findProduct = (products, slug) => {
+  const decoded = decodeURIComponent(slug).toLowerCase();
+  return products.find((item) => {
+    const titleMatch = item.title && item.title.toLowerCase() === decoded;
+    const slugifiedTitle = item.title && item.title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+    const slugMatch = item.slug && item.slug.toLowerCase() === decoded;
+    return titleMatch || slugMatch || slugifiedTitle === decoded;
+  });
+};
+
+const PROJECT_ID = "rajbiosis-central";
+const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+function parseFirestoreFields(fields) {
+  const obj = {};
+  if (!fields) return obj;
+  for (const [key, value] of Object.entries(fields)) {
+    if ("stringValue" in value) {
+      obj[key] = value.stringValue;
+    } else if ("booleanValue" in value) {
+      obj[key] = value.booleanValue;
+    } else if ("integerValue" in value) {
+      obj[key] = parseInt(value.integerValue, 10);
+    } else if ("doubleValue" in value) {
+      obj[key] = parseFloat(value.doubleValue);
+    } else if ("arrayValue" in value) {
+      const values = value.arrayValue.values || [];
+      obj[key] = values.map(val => {
+        if ("stringValue" in val) return val.stringValue;
+        if ("mapValue" in val) return parseFirestoreFields(val.mapValue.fields);
+        return val;
+      });
+    } else if ("mapValue" in value) {
+      obj[key] = parseFirestoreFields(value.mapValue.fields);
+    }
+  }
+  return obj;
+}
+
+let serverProductsCache = null;
+let serverCacheTimestamp = 0;
+let activeProductsPromise = null;
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours cache
+
+async function getAllProducts() {
+  const now = Date.now();
+  if (serverProductsCache && (now - serverCacheTimestamp < CACHE_TTL)) {
+    return serverProductsCache;
+  }
+
+  if (activeProductsPromise) {
+    return activeProductsPromise;
+  }
+
+  activeProductsPromise = (async () => {
+    try {
+      // 1. Fetch normal and category snapshots in parallel via REST API
+      const [prodRes, catRes] = await Promise.all([
+        fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/products`),
+        fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories`)
+      ]);
+
+      const [prodData, catData] = await Promise.all([
+        prodRes.json(),
+        catRes.json()
+      ]);
+
+      let publishedProducts = [];
+      if (prodRes.status === 200 && prodData.fields) {
+        const parsedData = parseFirestoreFields(prodData.fields);
+        const allProducts = parsedData.products || [];
+        publishedProducts = allProducts.filter((item) => item.isPublished);
+      }
+
+      let categoryProducts = [];
+      if (catRes.status === 200 && catData.documents) {
+        // Fetch subcategories for all categories in parallel
+        const subcategoryPromises = catData.documents.map(async (categoryDoc) => {
+          const categoryFields = parseFirestoreFields(categoryDoc.fields);
+          const categoryId = categoryDoc.name.split("/").pop();
+
+          try {
+            const subRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories/${categoryId}/subcategories`);
+            if (subRes.status !== 200) return [];
+            
+            const subData = await subRes.json();
+            const docs = subData.documents || [];
+            
+            const list = [];
+            docs.forEach((subDoc) => {
+              const subFields = parseFirestoreFields(subDoc.fields);
+              (subFields.products || []).forEach((item) => {
+                if (item.isPublished) {
+                  list.push({
+                    ...item,
+                    category: categoryFields.category,
+                    subCategory: subFields.subCategory,
+                  });
+                }
+              });
+            });
+            return list;
+          } catch (err) {
+            console.error(`Failed to fetch subcategories for category ${categoryId}:`, err);
+            return [];
+          }
+        });
+
+        const subcategoryResults = await Promise.all(subcategoryPromises);
+        categoryProducts = subcategoryResults.flat();
+      }
+
+      const allMergedProducts = [
+        ...publishedProducts,
+        ...categoryProducts,
+      ];
+
+      // Store in global memory cache
+      serverProductsCache = allMergedProducts;
+      serverCacheTimestamp = Date.now();
+
+      return allMergedProducts;
+    } catch (error) {
+      console.error("Error fetching all products via REST API:", error);
+      // Return stale cache if DB query fails
+      if (serverProductsCache) {
+        return serverProductsCache;
+      }
+      return [];
+    } finally {
+      activeProductsPromise = null;
+    }
+  })();
+
+  return activeProductsPromise;
+}
+
+// Warm cache in the background immediately
+getAllProducts().catch(err => console.error("Failed to warm products cache on startup:", err));
+
 export async function generateMetadata({
   params,
 }) {
   const { slug, district } = await params;
 
-  const snap = await getDoc(
-    doc(
-      db,
-      "websites",
-      "humanbiomedicalcom",
-      "pages",
-      "products"
-    )
-  );
-
-  const products = snap.exists()
-    ? snap.data().products || []
-    : [];
-
-  const product = products.find(
-    (item) =>
-      item.title === decodeURIComponent(slug)
-  );
+  const products = await getAllProducts();
+  const product = findProduct(products, slug);
 
   if (!product) {
     return {
@@ -131,18 +254,8 @@ export default async function ProductPage({
 }) {
   const { district, slug } = await params;
 
-  const snap = await getDoc(
-    doc(db, "websites", "humanbiomedicalcom", "pages", "products")
-  );
-
-  const products = snap.exists()
-    ? snap.data().products || []
-    : [];
-
-  const product = products.find(
-    (item) =>
-      item.title === decodeURIComponent(slug)
-  );
+  const products = await getAllProducts();
+  const product = findProduct(products, slug);
 
   if (!product) {
     notFound();

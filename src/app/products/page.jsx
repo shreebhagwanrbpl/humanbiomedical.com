@@ -2,7 +2,7 @@
 
 import "./products.css";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import {
   doc,
@@ -10,113 +10,240 @@ import {
   collection,
   getDocs,
 } from "firebase/firestore";
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Search, X } from "lucide-react";
+let clientCategoriesCache = null; // [{ id: '...', name: '...' }]
+let clientNormalProducts = null;  // [...products]
+let clientLoadedCategories = {};  // { "Category Name": [...products] }
+let clientAllProductsLoaded = false;
+let clientAllProductsPromise = null;
+
 export default function Products({ districtData }) {
   const location = districtData?.district || "India";
   const district = districtData?.slug;
   const [productSearch, setProductSearch] = useState("");
   const [products, setProducts] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [normalProducts, setNormalProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingCategory, setLoadingCategory] = useState(false);
+  const [allProductsLoaded, setAllProductsLoaded] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
   const [openedCategory, setOpenedCategory] = useState("");
   const [openedSubCategory, setOpenedSubCategory] = useState({});
   const [showTopButton, setShowTopButton] = useState(false);
+
+  // Initial load: Fetch category list and normal products only (<300ms query)
   useEffect(() => {
-    const fetchProducts = async () => {
+    const loadInitialData = async () => {
       try {
-        // ==========================
-        // NORMAL PRODUCTS
-        // ==========================
+        let cats = [];
+        let normals = [];
 
-        const snap = await getDoc(
-          doc(
-            db,
-            "websites",
-            "humanbiomedicalcom",
-            "pages",
-            "products"
-          )
-        );
+        if (clientCategoriesCache && clientNormalProducts) {
+          cats = clientCategoriesCache;
+          normals = clientNormalProducts;
+        } else {
+          const [snap, categorySnap] = await Promise.all([
+            getDoc(
+              doc(
+                db,
+                "websites",
+                "humanbiomedicalcom",
+                "pages",
+                "products"
+              )
+            ),
+            getDocs(
+              collection(
+                db,
+                "websites",
+                "humanbiomedicalcom",
+                "pages",
+                "categoryproducts",
+                "categories"
+              )
+            )
+          ]);
 
-        let publishedProducts = [];
+          if (snap.exists()) {
+            const allProducts = snap.data().products || [];
+            normals = allProducts.filter((item) => item.isPublished);
+          }
 
-        if (snap.exists()) {
-          const allProducts = snap.data().products || [];
+          cats = categorySnap.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.data().category || "Uncategorized",
+          }));
+          cats.sort((a, b) => a.name.localeCompare(b.name));
 
-          publishedProducts = allProducts.filter(
-            (item) => item.isPublished
-          );
+          clientCategoriesCache = cats;
+          clientNormalProducts = normals;
         }
 
-        // ==========================
-        // CATEGORY PRODUCTS
-        // ==========================
+        setCategoriesList(cats);
+        setNormalProducts(normals);
+        setLoading(false);
 
-        const categorySnap = await getDocs(
+        // Pre-set the first category
+        if (cats.length > 0) {
+          setOpenedCategory((prev) => prev || cats[0].name);
+        }
+      } catch (error) {
+        setLoading(false);
+        console.error("Error loading initial products data:", error);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Fetch category products on demand when active category changes
+  useEffect(() => {
+    if (!openedCategory || !categoriesList.length) return;
+    if (allProductsLoaded) return;
+
+    const loadCategoryProducts = async () => {
+      const catObj = categoriesList.find((c) => c.name === openedCategory);
+      if (!catObj) {
+        setProducts(normalProducts);
+        return;
+      }
+
+      // Read from global memory cache
+      if (clientLoadedCategories[openedCategory]) {
+        setProducts([...normalProducts, ...clientLoadedCategories[openedCategory]]);
+        return;
+      }
+
+      setLoadingCategory(true);
+      try {
+        const subSnap = await getDocs(
           collection(
             db,
             "websites",
             "humanbiomedicalcom",
             "pages",
             "categoryproducts",
-            "categories"
+            "categories",
+            catObj.id,
+            "subcategories"
           )
         );
 
-        let categoryProducts = [];
-
-        for (const categoryDoc of categorySnap.docs) {
-          const categoryData = categoryDoc.data();
-
-          const subSnap = await getDocs(
-            collection(
-              db,
-              "websites",
-              "humanbiomedicalcom",
-              "pages",
-              "categoryproducts",
-              "categories",
-              categoryDoc.id,
-              "subcategories"
-            )
-          );
-
-          subSnap.forEach((subDoc) => {
-            const subData = subDoc.data();
-
-            (subData.products || []).forEach((item) => {
-              if (item.isPublished) {
-                categoryProducts.push({
-                  ...item,
-                  category: categoryData.category,
-                  subCategory: subData.subCategory,
-                });
-              }
-            });
+        const list = [];
+        subSnap.forEach((subDoc) => {
+          const subData = subDoc.data();
+          (subData.products || []).forEach((item) => {
+            if (item.isPublished) {
+              list.push({
+                ...item,
+                category: openedCategory,
+                subCategory: subData.subCategory,
+              });
+            }
           });
-        }
+        });
 
-        // ==========================
-        // MERGE BOTH
-        // ==========================
+        clientLoadedCategories[openedCategory] = list;
 
-        setProducts([
-          ...publishedProducts,
-          ...categoryProducts,
-        ]);
-
-
-
-        setLoading(false);
-      } catch (error) {
-        setLoading(false);
-        console.log(error);
+        setProducts([...normalProducts, ...list]);
+        setLoadingCategory(false);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event("resize"));
+        });
+      } catch (err) {
+        console.error(`Failed to fetch category ${openedCategory} products:`, err);
+        setProducts(normalProducts);
+        setLoadingCategory(false);
       }
     };
 
-    fetchProducts();
-  }, []);
+    loadCategoryProducts();
+  }, [openedCategory, categoriesList, normalProducts, allProductsLoaded]);
+
+  // Fetch-on-Focus helper to load all other products for global site-wide search
+  const loadAllProductsInBackground = async () => {
+    if (allProductsLoaded || clientAllProductsLoaded) {
+      if (!allProductsLoaded) {
+        let merged = [...normalProducts];
+        Object.values(clientLoadedCategories).forEach((list) => {
+          merged.push(...list);
+        });
+        setProducts(merged);
+        setAllProductsLoaded(true);
+      }
+      return;
+    }
+
+    if (clientAllProductsPromise) {
+      await clientAllProductsPromise;
+      let merged = [...normalProducts];
+      Object.values(clientLoadedCategories).forEach((list) => {
+        merged.push(...list);
+      });
+      setProducts(merged);
+      setAllProductsLoaded(true);
+      return;
+    }
+
+    clientAllProductsPromise = (async () => {
+      try {
+        const promises = categoriesList.map(async (catObj) => {
+          if (clientLoadedCategories[catObj.name]) return;
+
+          try {
+            const subSnap = await getDocs(
+              collection(
+                db,
+                "websites",
+                "humanbiomedicalcom",
+                "pages",
+                "categoryproducts",
+                "categories",
+                catObj.id,
+                "subcategories"
+              )
+            );
+
+            const list = [];
+            subSnap.forEach((subDoc) => {
+              const subData = subDoc.data();
+              (subData.products || []).forEach((item) => {
+                if (item.isPublished) {
+                  list.push({
+                    ...item,
+                    category: catObj.name,
+                    subCategory: subData.subCategory,
+                  });
+                }
+              });
+            });
+
+            clientLoadedCategories[catObj.name] = list;
+          } catch (e) {
+            console.error(e);
+          }
+        });
+
+        await Promise.all(promises);
+        clientAllProductsLoaded = true;
+
+        let merged = [...normalProducts];
+        Object.values(clientLoadedCategories).forEach((list) => {
+          merged.push(...list);
+        });
+        setProducts(merged);
+        setAllProductsLoaded(true);
+      } catch (err) {
+        console.error("Error loading all products in background:", err);
+      } finally {
+        clientAllProductsPromise = null;
+      }
+    })();
+
+    await clientAllProductsPromise;
+  };
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
       const text = `
@@ -192,7 +319,10 @@ export default function Products({ districtData }) {
       }
     );
 
-    setOpenedSubCategory(initialState);
+    setOpenedSubCategory((prev) => {
+      if (Object.keys(prev).length) return prev;
+      return initialState;
+    });
   }, [sortedGroupedProducts]);
   useEffect(() => {
     const handleScroll = () => {
@@ -247,6 +377,7 @@ export default function Products({ districtData }) {
                 type="text"
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
+                onFocus={loadAllProductsInBackground}
                 placeholder="Search biomedical products..."
                 className="w-full h-20 pl-20 pr-6 rounded-3xl bg-[#f8fbff] border border-blue-100 outline-none focus:border-blue-500 text-lg"
               />
@@ -311,178 +442,245 @@ export default function Products({ districtData }) {
         </div>
       </div>
       <div className="container-custom">
-        {!loading ? (
 
-          <div className="products-layout">
+        <div className="products-layout">
 
-            {/* LEFT SIDEBAR */}
+          {/* LEFT SIDEBAR */}
 
-            <aside className="category-sidebar">
-              <div className="category-sidebar-header">
-                <h3 className="text-2xl font-bold mb-5">
-                  Categories
-                </h3>
+          <aside className="category-sidebar">
+            <div className="category-sidebar-header">
+              <h3 className="text-2xl font-bold mb-4 text-slate-800">
+                Categories
+              </h3>
 
+              <div className="relative mb-5">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Search size={18} />
+                </span>
                 <input
                   type="text"
                   placeholder="Search Category..."
                   value={categorySearch}
                   onChange={(e) => setCategorySearch(e.target.value)}
-                  className="w-full h-12 px-4 rounded-xl border border-slate-300"
+                  className="w-full h-11 pl-11 pr-10 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm transition-all"
                 />
+                {categorySearch && (
+                  <button
+                    onClick={() => setCategorySearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
+            </div>
 
-              <div className="category-sidebar-body">
+            <div className="category-sidebar-body">
+
+              {loading ? (
+
+                <div className="flex flex-col gap-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="skeleton-item h-14 w-full rounded-2xl"
+                    />
+                  ))}
+                </div>
+
+              ) : (
+
                 <div className="sidebar-categories">
 
-                  {Object.keys(sortedGroupedProducts)
-                    .filter((category) =>
-                      category
+                  {categoriesList
+                    .filter((cat) =>
+                      cat.name
                         .toLowerCase()
                         .includes(categorySearch.toLowerCase())
                     )
-                    .map((category) => (
-
-                      <div
-                        key={category}
-                        className="sidebar-category rounded-2xl overflow-hidden shadow-sm border border-slate-200"
-                      >
-
-                        <button
-                          className="sidebar-category-header w-full p-4 flex items-center justify-between bg-white hover:bg-blue-50"
-                          onClick={() =>
-                            setOpenedCategory(
-                              openedCategory === category
-                                ? ""
-                                : category
-                            )
-                          }
+                    .map((cat) => {
+                      const category = cat.name;
+                      const isOpen = openedCategory === category;
+                      return (
+                        <div
+                          key={category}
+                          className={`sidebar-category rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300 ${isOpen ? "is-open" : ""
+                            }`}
                         >
+                          <button
+                            className="sidebar-category-header w-full p-4 flex items-center justify-between bg-white hover:bg-blue-50/30 transition-colors duration-200 text-left"
+                            onClick={() => {
+                              setOpenedCategory(category);
+                              if (clientLoadedCategories[category]) {
+                                setProducts([...normalProducts, ...clientLoadedCategories[category]]);
+                              } else {
+                                setLoadingCategory(true);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              <ChevronRight
+                                size={18}
+                                className={`transition-transform duration-300 shrink-0 ${isOpen ? "rotate-90 text-blue-600" : "text-slate-400"
+                                  }`}
+                              />
+                              <span className={`font-semibold text-sm truncate transition-colors duration-200 ${isOpen ? "text-blue-600 font-bold" : "text-slate-700"
+                                }`}>
+                                {category}
+                              </span>
+                            </div>
 
-                          <div className="flex items-center gap-2">
-
-                            {openedCategory === category ? (
-                              <ChevronDown size={18} />
-                            ) : (
-                              <ChevronRight size={18} />
+                            {isOpen && (
+                              <span className="text-xs px-2.5 py-1 rounded-full font-semibold shrink-0 bg-blue-100 text-blue-700">
+                                {Object.values(sortedGroupedProducts[category] || {}).flat().length || 0}
+                              </span>
                             )}
 
-                            <span>{category}</span>
+                          </button>
 
-                          </div>
+                          {isOpen && (
 
-                          <span>
-                            {Object.values(sortedGroupedProducts[category]).flat().length}
-                          </span>
+                            <div className="sidebar-subcategory-list border-t border-slate-100 bg-slate-50/30">
+                              {loadingCategory && !clientLoadedCategories[category] ? (
+                                <div className="p-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                                  <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  <span>Loading subcategories...</span>
+                                </div>
+                              ) : Object.keys(sortedGroupedProducts[category] || {}).length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-400">
+                                  No subcategories found
+                                </div>
+                              ) : (
+                                Object.entries(sortedGroupedProducts[category] || {}).map(
+                                  ([subCategory, products]) => {
 
-                        </button>
+                                    const key = `${category}-${subCategory}`;
+                                    const isSubOpen = openedSubCategory[key];
 
-                        {openedCategory === category && (
+                                    return (
 
-                          <div className="sidebar-subcategory-list border-t bg-slate-50">
+                                      <div
+                                        key={key}
+                                        className="sidebar-subcategory"
+                                      >
 
-                            {Object.entries(sortedGroupedProducts[category]).map(
-                              ([subCategory, products]) => {
+                                        {/* SUB CATEGORY */}
 
-                                const key = `${category}-${subCategory}`;
+                                        <button
+                                          className="sidebar-subcategory-header w-full px-5 py-3 flex justify-between items-center bg-slate-50/50 hover:bg-blue-50/40 border-b border-slate-150 transition-colors duration-200 text-left"
+                                          onClick={() =>
+                                            setOpenedSubCategory((prev) => ({
+                                              ...prev,
+                                              [key]: !prev[key],
+                                            }))
+                                          }
+                                        >
 
-                                return (
+                                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                                            <ChevronRight
+                                              size={16}
+                                              className={`transition-transform duration-300 shrink-0 ${isSubOpen ? "rotate-90 text-blue-600" : "text-slate-400"
+                                                }`}
+                                            />
+                                            <span className={`text-xs font-semibold truncate transition-colors duration-200 ${isSubOpen ? "text-blue-600 font-bold" : "text-slate-600"
+                                              }`}>
+                                              {subCategory}
+                                            </span>
+                                          </div>
 
-                                  <div
-                                    key={key}
-                                    className="sidebar-subcategory"
-                                  >
+                                          <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 transition-colors ${isSubOpen ? "bg-blue-100 text-blue-700 font-semibold" : "bg-slate-200/60 text-slate-500"
+                                            }`}>
+                                            {products.length}
+                                          </span>
 
-                                    {/* SUB CATEGORY */}
+                                        </button>
 
-                                    <button
-                                      className="sidebar-subcategory-header w-full px-6 py-3 flex justify-between items-center bg-slate-50 hover:bg-blue-50 border-t border-slate-200"
-                                      onClick={() =>
-                                        setOpenedSubCategory((prev) => ({
-                                          ...prev,
-                                          [key]: !prev[key],
-                                        }))
-                                      }
-                                    >
+                                        {isSubOpen && (
 
-                                      <div className="flex items-center gap-2">
+                                          <div className="sidebar-product-list">
 
-                                        {openedSubCategory[key] ? (
-                                          <ChevronDown size={16} />
-                                        ) : (
-                                          <ChevronRight size={16} />
+                                            {products.map((product) => (
+
+                                              <button
+                                                key={
+                                                  product.id ||
+                                                  product.productId ||
+                                                  product.slug ||
+                                                  product.title
+                                                }
+                                                className="sidebar-product-item flex items-center gap-2 w-full text-left pl-9 pr-4 py-2.5 text-[13px] text-slate-500 hover:text-blue-600 hover:pl-10 transition-all duration-200"
+                                                onClick={() => {
+
+                                                  document
+                                                    .getElementById(
+                                                      product.id || product.title
+                                                    )
+                                                    ?.scrollIntoView({
+                                                      behavior: "smooth",
+                                                      block: "start",
+                                                    });
+
+                                                }}
+                                              >
+
+                                                <span className="sidebar-product-dot w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 transition-colors" />
+                                                <span className="truncate">{product.title}</span>
+
+                                              </button>
+
+                                            ))}
+
+                                          </div>
+
                                         )}
 
-                                        {subCategory}
-
                                       </div>
 
-                                      <span>{products.length}</span>
+                                    );
 
-                                    </button>
+                                  }
+                                ))}
 
-                                    {openedSubCategory[key] && (
+                            </div>
 
-                                      <div className="sidebar-product-list">
+                          )}
 
-                                        {products.map((product) => (
-
-                                          <button
-                                            key={
-                                              product.id ||
-                                              product.productId ||
-                                              product.slug ||
-                                              product.title
-                                            }
-                                            className="block w-full text-left pl-10 pr-4 py-3 text-sm hover:bg-blue-50"
-                                            onClick={() => {
-
-                                              document
-                                                .getElementById(
-                                                  product.id || product.title
-                                                )
-                                                ?.scrollIntoView({
-                                                  behavior: "smooth",
-                                                  block: "start",
-                                                });
-
-                                            }}
-                                          >
-
-                                            {product.title}
-
-                                          </button>
-
-                                        ))}
-
-                                      </div>
-
-                                    )}
-
-                                  </div>
-
-                                );
-
-                              }
-                            )}
-
-                          </div>
-
-                        )}
-
-                      </div>
-
-                    ))}
-
+                        </div>
+                      );
+                    })}
                 </div>
+
+              )}
+
+            </div>
+          </aside>
+
+          <div className="products-content">
+            <p style={{ display: "none" }}>
+              {Object.keys(sortedGroupedProducts).length}
+            </p>
+            {loading || (loadingCategory && !clientLoadedCategories[openedCategory]) ? (
+              <div className="flex flex-col gap-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
+                    <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-8 items-center animate-pulse">
+                      <div className="rounded-[30px] h-[260px] bg-slate-100" />
+                      <div className="flex flex-col gap-4">
+                        <div className="h-10 w-2/3 bg-slate-100 rounded-lg" />
+                        <div className="h-6 w-1/2 bg-slate-100 rounded-lg" />
+                        <div className="h-6 w-1/3 bg-slate-100 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </aside>
-
-            {/* RIGHT SIDE */}
-
-            <div className="products-content">
-              {Object.entries(sortedGroupedProducts).map(
-                ([category, subCategories]) => (
+            ) : (
+              Object.entries(sortedGroupedProducts)
+                .filter(([category]) => category === openedCategory)
+                .map(([category, subCategories]) => (
 
                   <section
                     key={category}
@@ -534,6 +732,7 @@ export default function Products({ districtData }) {
                                           src={product.image || product.images?.[0]}
                                           alt={product.title}
                                           className="max-h-[180px] object-contain"
+                                          loading="lazy"
                                         />
                                       ) : (
                                         <div className="text-center">
@@ -601,12 +800,12 @@ export default function Products({ districtData }) {
                                         <Link
                                           href={
                                             district
-                                              ? `/${district.toLowerCase().replace(/\s+/g, "-")}/items/${product.slug ||
+                                              ? `/${district.toLowerCase().replace(/\s+/g, "-")}/products/${product.slug ||
                                               product.title
                                                 ?.toLowerCase()
                                                 .replace(/\s+/g, "-")
                                                 .replace(/[^\w-]+/g, "")}`
-                                              : `/items/${product.slug ||
+                                              : `/products/${product.slug ||
                                               product.title
                                                 ?.toLowerCase()
                                                 .replace(/\s+/g, "-")
@@ -639,20 +838,13 @@ export default function Products({ districtData }) {
 
                   </section>
 
-                )
-              )}
-
-            </div>
+                ))
+            )}
 
           </div>
 
-        ) : (
+        </div>
 
-          <div className="text-center py-20">
-            Loading...
-          </div>
-
-        )}
       </div>
       {/* <div className="dna-pagination">
 
