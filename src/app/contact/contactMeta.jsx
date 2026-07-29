@@ -8,11 +8,11 @@ export default async function getContactMetadata(
         : "India";
 
     const url = district
-        ? `https://qlyte.com/${district}/contact`
-        : `https://qlyte.com/contact`;
+        ? `https://humanbiomedical.com/${district}/contact`
+        : `https://humanbiomedical.com/contact`;
 
     return {
-        title: `Electrolyte Reagent Supplier Contact in ${location} | Qlyte`,
+        title: `Electrolyte Reagent Supplier Contact in ${location} | humanbiomedicalcom`,
 
         description: `Contact trusted electrolyte reagent supplier in ${location}. Get premium Roche 9180, ERBA EC 90, Medica EasyLyte and compatible electrolyte analyzer reagents.`,
 
@@ -30,7 +30,7 @@ export default async function getContactMetadata(
             title: `Electrolyte Supplier in ${location}`,
             description: `Trusted electrolyte reagent supplier in ${location}.`,
             url,
-            siteName: "Qlyte",
+            siteName: "humanbiomedicalcom",
             locale: "en_IN",
             type: "website",
         },

@@ -1,39 +1,45 @@
 import "./services.css";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Link from "next/link";
 export const metadata = {
-  title: "Electrolyte Reagent Supplier Services in India | Qlyte",
+  title:
+    "Laboratory & Hospital Equipment Services in India | Human Biomedical LLP",
 
   description:
-    "Premium electrolyte reagent supply services in India for Roche 9180, ERBA EC 90, Medica EasyLyte, Sensacore, HDC Lyte and other electrolyte analyzers for hospitals and laboratories.",
+    "Human Biomedical LLP provides laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions across India for hospitals, laboratories, clinics, research institutions, and healthcare organizations.",
 
   keywords: [
-    "electrolyte reagent supplier india",
-    "electrolyte analyzer reagent supplier",
-    "roche 9180 electrolyte reagent",
-    "erba ec 90 reagent supplier",
-    "medica easylyte reagent",
-    "sensacore electrolyte solution",
-    "hdc lyte electrolyte",
-    "electrolyte consumables india",
-    "hospital electrolyte reagent supplier",
-    "pathology laboratory reagent supplier",
-    "diagnostic laboratory electrolyte reagent",
-    "electrolyte solutions india",
+    "laboratory equipment supplier india",
+    "hospital equipment supplier india",
+    "medical equipment supplier india",
+    "diagnostic equipment supplier",
+    "pathology laboratory equipment",
+    "medical devices supplier india",
+    "laboratory instruments india",
+    "healthcare equipment supplier",
+    "laboratory consumables supplier",
+    "hospital furniture supplier",
+    "ICU equipment supplier india",
+    "OT equipment supplier india",
+    "diagnostic systems india",
+    "research laboratory equipment",
+    "Human Biomedical LLP",
   ],
 
   alternates: {
-    canonical: "https://qlyte.com/services",
+    canonical: "https://humanbiomedical.com/services",
   },
 
   openGraph: {
-    title: "Electrolyte Reagent Services In India",
+    title:
+      "Laboratory & Hospital Equipment Services in India | Human Biomedical LLP",
 
     description:
-      "Trusted supplier of premium electrolyte analyzer reagents for hospitals, pathology laboratories and diagnostic centers across India.",
+      "Human Biomedical LLP is a trusted supplier of laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions across India.",
 
-    url: "https://qlyte.com/services",
-    siteName: "Qlyte",
+    url: "https://humanbiomedical.com/services",
+    siteName: "Human Biomedical LLP",
     type: "website",
   },
 
@@ -51,7 +57,7 @@ export default async function Services({
     districtData?.district ||
     "India";
   const snap = await getDoc(
-    doc(db, "websites", "qlyte", "pages", "services")
+    doc(db, "websites", "humanbiomedicalcom", "pages", "services")
   );
 
   const firebaseServices = snap.exists()
@@ -74,42 +80,45 @@ export default async function Services({
         <div className="container-custom">
           <span className="service-tag">Our Services</span>
 
+
           <h1>
-            Premium Electrolyte Analyzer Reagents In {districtName} For Hospitals &
-            Laboratories
+            Laboratory & Hospital Equipment in {districtName}
           </h1>
 
+
           <p>
-            We provide premium electrolyte analyzer reagents compatible with
-            Roche 9180, ERBA EC 90, Medica EasyLyte, Sensacore, HDC Lyte and
-            more for hospitals, pathology laboratories, diagnostic centers and
-            healthcare institutions across {districtName}.
+            Explore our comprehensive range of laboratory instruments,
+            hospital equipment, diagnostic systems, pathology analyzers,
+            medical devices, laboratory consumables, and healthcare
+            solutions. Human Biomedical LLP supplies premium-quality
+            products for hospitals, diagnostic centres, pathology
+            laboratories, research institutions, clinics, nursing homes,
+            and healthcare organizations across {districtName}.
           </p>
         </div>
       </section>
 
       {/* SERVICES GRID */}
-      <section className="services-section">
+      <section className="services-section pt-16">
         <div className="container-custom">
           <div className="section-heading">
             <span>What We Offer</span>
-            <h2>Premium Electrolyte Reagent Solutions</h2>
+
+            <h2>
+              Complete Laboratory & Hospital Equipment Solutions
+            </h2>
           </div>
 
           <div className="services-grid">
             {firebaseServices.slice(0, 6).map((item, index) => (
               <div className="service-card" key={index}>
                 <div className="service-icon">
-                  {icons[index] || "🧪"}
+                  {icons[index] || "🏥"}
                 </div>
 
-                <h3>
-                  {item.title}
-                </h3>
+                <h3>{item.title}</h3>
 
-                <p>
-                  {item.desc}
-                </p>
+                <p>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -117,110 +126,152 @@ export default async function Services({
       </section>
 
       {/* PROCESS */}
-      <section className="process-section">
+      <section className="process-section pt-20">
         <div className="container-custom">
           <div className="section-heading">
             <span>How We Work</span>
-            <h2>Our Supply Process</h2>
+
+            <h2>Our Service Process</h2>
           </div>
 
           <div className="process-grid">
+
             <div className="process-card">
               <h3>01</h3>
               <h4>Requirement Analysis</h4>
-              <p>Understanding your electrolyte analyzer requirements.</p>
+
+              <p>
+                We understand your laboratory, hospital, and healthcare equipment
+                requirements.
+              </p>
             </div>
 
             <div className="process-card">
               <h3>02</h3>
-              <h4>Product Selection</h4>
+              <h4>Product Recommendation</h4>
+
               <p>
-                Selecting compatible electrolyte reagents for your analyzer.
+                Our experts recommend the most suitable laboratory and medical
+                equipment based on your needs.
               </p>
             </div>
 
             <div className="process-card">
               <h3>03</h3>
               <h4>Fast Delivery</h4>
-              <p>Secure and quick reagent delivery across {districtName}.</p>
+
+              <p>
+                Secure and timely delivery of medical equipment across{" "}
+                {districtName}.
+              </p>
             </div>
 
             <div className="process-card">
               <h3>04</h3>
-              <h4>Customer Support</h4>
-              <p>Continuous support and reagent guidance whenever required.</p>
+              <h4>Technical Support</h4>
+
+              <p>
+                Expert installation guidance and dependable after-sales support
+                whenever required.
+              </p>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* WHY US */}
-      <section className="why-service">
+      <section className="why-service py-20">
         <div className="container-custom why-grid-service">
+
           <div className="why-service-image">
             <img
               src="https://images.unsplash.com/photo-1581594549595-35f6edc7b762?q=80&w=1200"
-              alt={`Premium Electrolyte Reagent Supplier In ${districtName}`}
+              alt={`Laboratory & Hospital Equipment Supplier in ${districtName}`}
             />
           </div>
 
           <div className="why-service-content">
-            <span>Why Choose Us</span>
 
-            <h2>Trusted Electrolyte Reagent Supplier You Can Trust</h2>
+            <span>Why Choose Human Biomedical LLP</span>
+
+            <h2>
+              Trusted Laboratory & Hospital Equipment Supplier
+            </h2>
 
             <p>
-              Our experienced team delivers premium quality electrolyte analyzer
-              reagents trusted by hospitals, pathology labs and diagnostic
-              centers for reliable testing performance.
+              Human Biomedical LLP is committed to supplying premium laboratory
+              instruments, diagnostic systems, hospital equipment, medical
+              devices, and healthcare solutions with reliable quality,
+              competitive pricing, expert technical support, and timely
+              delivery.
             </p>
 
             <div className="service-features">
-              <div>🧪 Premium Quality Reagents</div>
-              <div>🚚 Fast PAN {districtName} Delivery</div>
-              <div>🎧 Dedicated Support</div>
-              <div>⚡ High Test Accuracy</div>
+              <div>🏥 Premium Medical Equipment</div>
+
+              <div>🚚 Fast Delivery Across {districtName}</div>
+
+              <div>🎧 Expert Technical Support</div>
+
+              <div>🔬 Reliable Healthcare Solutions</div>
             </div>
+
           </div>
         </div>
       </section>
 
-      <section className="seo-services">
+      {/* SEO */}
+      <section className="seo-services py-20">
         <div className="container-custom">
-          <h2>Trusted Electrolyte Reagent Supplier In {districtName}</h2>
+
+          <h2>
+            Trusted Laboratory & Hospital Equipment Supplier in {districtName}
+          </h2>
 
           <p>
-            Central Biomedicals provides trusted electrolyte analyzer reagents
-            in {districtName} including Roche 9180, ERBA EC 90, Medica EasyLyte,
-            Sensacore, HDC Lyte and Biosystem Diestro compatible solutions. Our
-            premium quality electrolyte reagents are trusted by hospitals,
-            diagnostic laboratories, pathology centers and healthcare
-            institutions for accurate sodium, potassium and chloride testing.
+            Human Biomedical LLP is a trusted supplier of laboratory
+            instruments, hospital equipment, diagnostic systems, pathology
+            analyzers, ICU & OT equipment, medical devices, laboratory
+            consumables, and healthcare solutions in {districtName}. We serve
+            hospitals, pathology laboratories, diagnostic centres, research
+            institutions, clinics, nursing homes, blood banks, and healthcare
+            organizations with quality products, competitive pricing, expert
+            support, and dependable delivery.
           </p>
+
         </div>
       </section>
 
       {/* CTA */}
-      {/* <section className="service-cta">
+      <section className="service-cta">
         <div className="container-custom service-cta-box">
 
           <h2>
-            Need Premium Laboratory
-            Equipment Services?
+            Looking for Laboratory & Hospital Equipment?
           </h2>
 
           <p>
-            Contact our experts today for
-            scientific and healthcare
-            equipment solutions.
+            Contact Human Biomedical LLP for high-quality laboratory
+            instruments, hospital equipment, diagnostic systems, medical
+            devices, and healthcare solutions with expert support and
+            competitive pricing.
           </p>
 
-          <button>
-            Contact Us
-          </button>
+          <Link
+            href={
+              districtData?.slug
+                ? `/${districtData.slug}/contact`
+                : "/contact"
+            }
+          >
+            <button>
+              Contact Us
+            </button>
+          </Link>
 
         </div>
-      </section> */}
+      </section>
     </>
   );
 }

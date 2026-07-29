@@ -142,7 +142,7 @@ HERO SECTION
       #f5faff,
       #ffffff);
 
-  padding-top: 22px;
+  padding-top: 100px;
 }
 
 .hero-grid {
@@ -265,14 +265,22 @@ HERO IMAGE
   position: relative;
 }
 
+.hero-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .hero-image img {
   width: 100%;
-  max-width: 550px;
+  max-width: 650px;
   height: auto;
-  border-radius: 40px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, .08);
+  object-fit: contain;
+  border-radius: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .08);
   animation: floatImage 4s ease-in-out infinite;
-  margin-top: -257px;
+  margin-top: 0;
+  /* <- negative margin hata do */
 }
 
 @keyframes floatImage {

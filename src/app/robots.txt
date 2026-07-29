@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap:
-https://qlyte.com/sitemap.xml
+https://humanbiomedical.com/sitemap.xml

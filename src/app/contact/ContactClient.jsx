@@ -30,7 +30,7 @@ export default function ContactClient({
             )
             .join(" ");
 
-    const officeAddress =
+    const Office =
         districtSlug
             ? stateName
                 ? `${formattedDistrict}, ${stateName}, India`
@@ -82,7 +82,7 @@ export default function ContactClient({
                 collection(
                     db,
                     "websitesQueries",
-                    "qlyte",
+                    "humanbiomedicalcom",
                     "contactQueries"
                 ),
                 {
@@ -118,7 +118,7 @@ export default function ContactClient({
                     doc(
                         db,
                         "websites",
-                        "qlyte",
+                        "humanbiomedicalcom",
                         "pages",
                         "contact"
                     )
@@ -150,6 +150,7 @@ export default function ContactClient({
     return (
         <>
             <Toaster position="top-right" />
+
             {/* HERO */}
             <section className="contact-hero">
                 <div className="container-custom">
@@ -158,22 +159,15 @@ export default function ContactClient({
                     </span>
 
                     <h1>
-                        Contact Trusted Electrolyte
-                        Reagent Supplier In{" "}
-                        {districtName}
+                        Contact Human Biomedical LLP in {districtName}
                     </h1>
 
                     <p>
-                        Need premium electrolyte
-                        analyzer reagents for Roche
-                        9180, ERBA EC 90, Medica
-                        EasyLyte, HDC Lyte,
-                        Sensacore or other
-                        analyzers? Contact our
-                        expert team today for
-                        reliable reagent solutions,
-                        technical support and fast
-                        PAN {districtName} delivery.
+                        Looking for laboratory instruments, hospital equipment,
+                        diagnostic systems, pathology analyzers, medical devices,
+                        laboratory consumables, or healthcare solutions? Our team is
+                        ready to help you with product recommendations, technical
+                        guidance, quotations, and timely delivery across {districtName}.
                     </p>
                 </div>
             </section>
@@ -181,34 +175,30 @@ export default function ContactClient({
             {/* CONTACT */}
             <section className="contact-section">
                 <div className="container-custom contact-grid">
+
                     <div className="contact-info">
+
                         <span>Get In Touch</span>
 
                         <h2>
-                            Get Expert Electrolyte
-                            Reagent Consultation
+                            Speak With Our Healthcare Equipment Experts
                         </h2>
 
                         <p>
-                            We are here to help you
-                            with premium electrolyte
-                            analyzer reagents, product
-                            guidance, compatibility
-                            support and trusted
-                            reagent supply for
-                            hospitals and
-                            laboratories.
+                            Human Biomedical LLP is committed to providing reliable
+                            laboratory and hospital equipment solutions. Contact our
+                            experts for product information, quotations, technical
+                            support, installation guidance, and after-sales assistance.
                         </p>
 
                         <div className="info-cards">
+
                             <div className="info-card">
                                 📍
                                 <div>
-                                    <h4>
-                                        Office Address
-                                    </h4>
+                                    <h4>Office Address</h4>
                                     <p>
-                                        {officeAddress}
+                                        {getValue("Office") || Office}
                                     </p>
                                 </div>
                             </div>
@@ -218,9 +208,7 @@ export default function ContactClient({
                                 <div>
                                     <h4>Call Us</h4>
                                     <p>
-                                        {getValue(
-                                            "Phone"
-                                        ) ||
+                                        {getValue("Phone") ||
                                             "+91 XXXXX XXXXX"}
                                     </p>
                                 </div>
@@ -231,21 +219,23 @@ export default function ContactClient({
                                 <div>
                                     <h4>Email Us</h4>
                                     <p>
-                                        {getValue(
-                                            "Email"
-                                        ) ||
-                                            "info@qlyte.com"}
+                                        {getValue("Email") ||
+                                            "info@humanbiomedical.com"}
                                     </p>
                                 </div>
                             </div>
+
                         </div>
+
                     </div>
 
                     {/* FORM */}
                     <div className="contact-form-box">
+
                         <h3>Send Message</h3>
 
                         <form onSubmit={handleSubmit}>
+
                             <input
                                 type="text"
                                 name="name"
@@ -285,37 +275,41 @@ export default function ContactClient({
                                 name="message"
                                 value={formData.message}
                                 onChange={handleChange}
-                                placeholder="Write Message..."
+                                placeholder="Tell us about your requirement..."
                                 required
                             />
+
                             <button type="submit">
                                 Send Message
                             </button>
+
                         </form>
+
                     </div>
+
                 </div>
             </section>
 
             {/* SEO */}
             <section className="seo-contact">
                 <div className="container-custom">
+
                     <h2>
-                        Trusted Electrolyte Reagent
-                        Supplier In {districtName}
+                        Trusted Laboratory & Hospital Equipment Supplier in {districtName}
                     </h2>
 
                     <p>
-                        Central Biomedicals is a
-                        trusted electrolyte analyzer
-                        reagent supplier in{" "}
-                        {districtName} providing
-                        premium compatible reagents
-                        for Roche 9180, ERBA EC 90,
-                        Medica EasyLyte, HDC Lyte,
-                        Sensacore ST200 Aqua and
-                        Biosystem Diestro
-                        analyzers.
+                        Human Biomedical LLP is a trusted supplier of laboratory
+                        instruments, hospital equipment, diagnostic systems,
+                        pathology analyzers, ICU & OT equipment, medical devices,
+                        laboratory consumables, and healthcare solutions in
+                        {` ${districtName}`}. We proudly serve hospitals,
+                        diagnostic centres, pathology laboratories, research
+                        institutions, clinics, nursing homes, blood banks,
+                        and healthcare organizations with quality products,
+                        expert support, and dependable service.
                     </p>
+
                 </div>
             </section>
 
@@ -323,29 +317,31 @@ export default function ContactClient({
             <section className="map-section">
                 <div className="container-custom">
                     <div className="map-wrapper">
+
                         <div
                             style={{
-                                border:
-                                    "4px solid #2563eb",
+                                border: "4px solid #2563eb",
                                 borderRadius: "20px",
                                 overflow: "hidden",
                             }}
                         >
                             <iframe
-                                src={`https://maps.google.com/maps?q=${officeAddress}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                                src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                                    getValue("Office") || Office
+                                )}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                                 width="100%"
                                 height="500"
-                                style={{
-                                    border: 0,
-                                }}
+                                style={{ border: 0 }}
                                 allowFullScreen
                                 loading="lazy"
                                 referrerPolicy="no-referrer-when-downgrade"
                             />
                         </div>
+
                     </div>
                 </div>
             </section>
+
         </>
     );
 }

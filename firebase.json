@@ -1,6 +1,6 @@
 {
   "apphosting": {
-    "backendId": "qlyte",
+    "backendId": "humanbiomedicalcom",
     "rootDir": ".",
     "ignore": [
       "node_modules",

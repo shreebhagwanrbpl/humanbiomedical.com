@@ -29,7 +29,7 @@ export default function GetQuoteForm() {
                 collection(
                     db,
                     "websitesQueries",
-                    "qlyte",
+                    "humanbiomedicalcom",
                     "productQueries"
                 ),
                 {

@@ -15,13 +15,13 @@ export default function ProductGallery({ product }) {
                 {activeMedia === "video" && product.video ? (
                     <video
                         controls
-                        autoPlay
                         className="main-video"
                     >
                         <source
                             src={product.video}
                             type="video/mp4"
                         />
+                        Your browser does not support the video tag.
                     </video>
                 ) : (
                     <img
@@ -30,7 +30,7 @@ export default function ProductGallery({ product }) {
                             product.image ||
                             "/images/products/default.webp"
                         }
-                        alt={product.title}
+                        alt={product.title || "Medical Equipment"}
                         className="main-product-image"
                     />
                 )}
@@ -43,19 +43,18 @@ export default function ProductGallery({ product }) {
                 {product.images?.map((img, index) => (
                     <div
                         key={index}
+                        className={`thumb-wrapper ${activeMedia === "image" && activeImage === index
+                            ? "active-thumb"
+                            : ""
+                            }`}
                         onClick={() => {
                             setActiveImage(index);
                             setActiveMedia("image");
                         }}
-                        className={`thumb-wrapper ${activeMedia === "image" &&
-                            activeImage === index
-                            ? "active-thumb"
-                            : ""
-                            }`}
                     >
                         <img
                             src={img}
-                            alt=""
+                            alt={`${product.title} ${index + 1}`}
                             className="thumb-image"
                         />
                     </div>
@@ -63,18 +62,11 @@ export default function ProductGallery({ product }) {
 
                 {product.video && (
                     <div
-                        className={`media-card ${activeMedia === "video"
-                            ? "active-thumb"
-                            : ""
+                        className={`media-card ${activeMedia === "video" ? "active-thumb" : ""
                             }`}
-                        onClick={() =>
-                            setActiveMedia("video")
-                        }
+                        onClick={() => setActiveMedia("video")}
                     >
-                        <div className="media-icon">
-                            ▶
-                        </div>
-
+                        <div className="media-icon">▶</div>
                         <span>Video</span>
                     </div>
                 )}
@@ -83,13 +75,10 @@ export default function ProductGallery({ product }) {
                     <a
                         href={product.pdf}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="media-card"
                     >
-                        <div className="media-icon">
-                            📄
-                        </div>
-
+                        <div className="media-icon">📄</div>
                         <span>PDF</span>
                     </a>
                 )}

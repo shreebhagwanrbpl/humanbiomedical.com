@@ -3,7 +3,7 @@ PRODUCT PAGE
 ========================== */
 
 .products-page {
-  padding: 90px 0;
+  padding: 140px 0 90px;
   background:
     radial-gradient(circle at top right,
       rgba(15, 108, 189, .08),
@@ -246,4 +246,265 @@ MOBILE
     width: 100%;
     text-align: center;
   }
+}
+
+/* ===========================
+PRODUCT LAYOUT
+=========================== */
+
+.products-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  margin-top: 40px;
+}
+
+
+.products-content {
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+}
+
+/* ===========================
+SIDEBAR
+=========================== */
+
+.category-sidebar {
+  position: sticky;
+  top: 110px;
+
+  align-self: start;
+  height: calc(100vh - 130px);
+  max-height: calc(100vh - 130px);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 30px;
+  padding: 28px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, .08);
+}
+
+.category-sidebar-header {
+  flex-shrink: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+.category-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.category-sidebar-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+
+
+.category-sidebar-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 20px;
+}
+
+.category-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.products-content {
+  min-height: 100%;
+}
+
+.category-sidebar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 20px;
+}
+
+.category-sidebar h3 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.category-sidebar input {
+  width: 100%;
+  height: 50px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  padding: 0 16px;
+  margin-bottom: 20px;
+}
+
+.category-sidebar button {
+  width: 100%;
+}
+
+/* ===========================
+RIGHT SIDE
+=========================== */
+.category-product-card {
+  background: #fff;
+  border-radius: 32px;
+  padding: 30px;
+  margin-bottom: 28px;
+  border: 1px solid #edf2f7;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
+  transition: .3s;
+}
+
+.category-product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, .12);
+}
+
+.category-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 180px;
+  height: 58px;
+
+  border-radius: 16px;
+
+  background: linear-gradient(135deg, #1677d2, #2d9cff);
+
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  transition: .3s;
+}
+
+.category-view-btn:hover {
+  transform: translateY(-3px);
+}
+
+/* ===========================
+RESPONSIVE
+=========================== */
+
+@media(max-width:1024px) {
+
+  .products-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .category-sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+    width: 100%;
+  }
+
+}
+
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: #fff;
+
+  padding: 20px 0;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  margin-bottom: 25px;
+}
+
+.subcategory-section {
+  position: relative;
+}
+
+.subcategory-header {
+  background: #fff;
+
+  padding: 14px 0;
+
+  margin-bottom: 20px;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-body {
+  position: relative;
+}
+
+.subcategory-products {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.category-body {
+  position: relative;
+}
+
+.sidebar-category {
+  position: relative;
+}
+
+.sidebar-category-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+}
+
+.sidebar-subcategory-list {
+  overflow: visible;
+}
+
+.sidebar-subcategory-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-subcategory-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 20px;
+}
+
+.sidebar-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sidebar-category {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-category-header {
+  flex-shrink: 0;
+}
+
+.sidebar-subcategory-list {
+  flex: 1;
+}
+
+.sidebar-subcategory {
+  position: relative;
+}
+
+.sidebar-subcategory-header {
+  position: sticky;
+  top: 0px;
+  /* ya 44px bhi try kar sakte ho */
+  z-index: 6;
+  background: #f8fafc;
+  margin-top: 0;
+}
+
+.sidebar-product-list {
+  position: relative;
 }

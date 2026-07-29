@@ -5,7 +5,12 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaYoutube,
+} from "react-icons/fa";
 import "./footer.css";
 
 export default function Footer({
@@ -44,7 +49,7 @@ export default function Footer({
       )
       .join(" ");
 
-  const officeAddress =
+  const Office =
     districtSlug
       ? stateName
         ? `${formattedDistrict}, ${stateName}, India`
@@ -59,7 +64,7 @@ export default function Footer({
           doc(
             db,
             "websites",
-            "qlyte",
+            "humanbiomedicalcom",
             "pages",
             "contact"
           )
@@ -79,7 +84,7 @@ export default function Footer({
               doc(
                 db,
                 "websites",
-                "qlyte",
+                "humanbiomedicalcom",
                 "districts",
                 district
               )
@@ -114,31 +119,68 @@ export default function Footer({
   return (
     <footer className="footer">
       <div className="container-custom">
+
         <div className="footer-top">
+
           {/* COMPANY */}
           <div className="footer-column">
+
             <h2 className="footer-logo">
-              Qlyte
+              Human Biomedical LLP
             </h2>
 
             <p className="footer-text">
-              Premium laboratory equipment,
-              scientific instruments and
-              healthcare solutions trusted by
-              hospitals, laboratories and
-              research centers.
+              Human Biomedical LLP is a trusted supplier of laboratory
+              instruments, hospital equipment, diagnostic systems,
+              pathology analyzers, medical devices, laboratory
+              consumables, and healthcare solutions for hospitals,
+              laboratories, research institutions, clinics, nursing
+              homes, and healthcare organizations across India.
             </p>
 
             <div className="social-icons">
-              <span>📘</span>
-              <span>📸</span>
-              <span>💼</span>
-              <span>▶️</span>
+              <a
+                href="https://www.facebook.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+              >
+                <FaFacebookF />
+              </a>
+
+              <a
+                href="https://www.instagram.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+              >
+                <FaInstagram />
+              </a>
+
+              <a
+                href="https://www.linkedin.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+              >
+                <FaLinkedinIn />
+              </a>
+
+              <a
+                href="https://www.youtube.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="YouTube"
+              >
+                <FaYoutube />
+              </a>
             </div>
+
           </div>
 
           {/* QUICK LINKS */}
           <div className="footer-column">
+
             <h3>Quick Links</h3>
 
             <Link href={getLink("/")}>
@@ -146,7 +188,7 @@ export default function Footer({
             </Link>
 
             <Link href={getLink("/about")}>
-              About
+              About Us
             </Link>
 
             <Link href={getLink("/products")}>
@@ -158,41 +200,45 @@ export default function Footer({
             </Link>
 
             <Link href={getLink("/contact")}>
-              Contact
+              Contact Us
             </Link>
+
           </div>
 
           {/* SERVICES */}
           <div className="footer-column">
+
             <h3>Our Services</h3>
 
-            <a href="#">
-              Laboratory Equipment
-            </a>
+            <Link href={getLink("/products")}>
+              Laboratory Instruments
+            </Link>
 
-            <a href="#">
-              Installation
-            </a>
+            <Link href={getLink("/products")}>
+              Hospital Equipment
+            </Link>
 
-            <a href="#">
-              Maintenance
-            </a>
+            <Link href={getLink("/products")}>
+              Diagnostic Systems
+            </Link>
 
-            <a href="#">
+            <Link href={getLink("/products")}>
+              Medical Devices
+            </Link>
+
+            <Link href={getLink("/contact")}>
               Technical Support
-            </a>
+            </Link>
 
-            <a href="#">
-              Calibration
-            </a>
           </div>
 
           {/* CONTACT */}
           <div className="footer-column">
+
             <h3>Contact Info</h3>
 
             <p>
-              📍{officeAddress}
+              📍 {getValue("office")}
             </p>
 
             <p>
@@ -204,17 +250,21 @@ export default function Footer({
             <p>
               ✉️{" "}
               {getValue("email") ||
-                "info@qlyte.com"}
+                "info@humanbiomedical.com"}
             </p>
+
           </div>
+
         </div>
 
         <div className="footer-bottom">
+
           <p>
-            © 2026 Qlyte. All Rights
-            Reserved.
+            © {new Date().getFullYear()} Human Biomedical LLP. All Rights Reserved.
           </p>
+
         </div>
+
       </div>
     </footer>
   );

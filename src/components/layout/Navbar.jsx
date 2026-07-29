@@ -45,8 +45,8 @@ export default function Navbar() {
           className="flex items-center"
         >
           <img
-            src="/qlyte.png"
-            alt="Qlyte logo"
+            src="/humanlogo.png"
+            alt="humanbiomedicals logo"
             className="h-10 sm:h-12 w-auto cursor-pointer"
           />
         </Link>

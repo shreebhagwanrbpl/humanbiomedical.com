@@ -1,49 +1,75 @@
 import "./about.css";
 
 import Link from "next/link";
-import Aboutmain from "../img/ws.png";
+import Aboutmain from "../img/Aboutmain.jpg";
 
 export const metadata = {
-  title: "About Central Biomedicals | Trusted Electrolyte Reagent Supplier",
+  title:
+    "About Human Biomedical LLP | Trusted Laboratory & Hospital Equipment Supplier",
 
   description:
-    "Learn about Central Biomedicals, a trusted electrolyte reagent supplier in {location} offering premium electrolyte analyzer reagents for Roche 9180, ERBA EC 90, Medica EasyLyte, Sensacore, HDC Lyte and more.",
+    "Learn about Human Biomedical LLP, a trusted supplier of laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions across India.",
 
   keywords: [
-    "about central biomedicals",
-    "electrolyte reagent supplier india",
-    "electrolyte analyzer reagent",
-    "roche 9180 electrolyte reagent",
-    "erba ec 90 reagent",
-    "medica easylyte reagent",
-    "sensacore electrolyte reagent",
-    "hdc lyte electrolyte",
-    "biosystem diestro electrolyte",
-    "electrolyte consumables india",
-    "hospital electrolyte reagent supplier",
-    "pathology lab electrolyte solutions",
-    "diagnostic laboratory reagent supplier",
-    "electrolyte solutions india",
+    "about Human Biomedical LLP",
+    "laboratory equipment supplier India",
+    "hospital equipment supplier India",
+    "medical equipment supplier",
+    "laboratory instruments supplier",
+    "diagnostic equipment supplier",
+    "pathology analyzer supplier",
+    "medical devices supplier",
+    "laboratory consumables supplier",
+    "healthcare equipment supplier",
+    "hospital laboratory supplier",
+    "medical equipment company India",
+    "diagnostic laboratory equipment",
+    "laboratory instruments India",
+    "hospital medical devices",
+    "healthcare solutions India",
   ],
 
   alternates: {
-    canonical: "https://qlyte.com/about",
+    canonical: "https://humanbiomedical.com/about",
   },
 
   openGraph: {
-    title: "About Central Biomedicals | Electrolyte Reagent Supplier",
+    title:
+      "About Human Biomedical LLP | Laboratory & Hospital Equipment Supplier",
 
     description:
-      "Trusted supplier of electrolyte analyzer reagents for hospitals, pathology labs and diagnostic centers across India.",
+      "Human Biomedical LLP is a trusted supplier of laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions for hospitals, laboratories, diagnostic centres, research institutes, and healthcare organizations across India.",
 
-    url: "https://qlyte.com/about",
-    siteName: "Central Biomedicals",
+    url: "https://humanbiomedical.com/about",
+
+    siteName: "Human Biomedical LLP",
+
+    locale: "en_IN",
+
     type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+
+    title:
+      "About Human Biomedical LLP | Laboratory & Hospital Equipment Supplier",
+
+    description:
+      "Trusted supplier of laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions across India.",
   },
 
   robots: {
     index: true,
     follow: true,
+
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
   },
 };
 
@@ -64,18 +90,22 @@ export default function AboutPage({
 
       <section className="seo-about">
         <div className="container-custom">
-          <span className="page-tag">About Central Biomedicals In {location}</span>
-          <h2>Trusted Electrolyte Reagent Supplier In {location}</h2>
+          <span className="page-tag">
+            About Human Biomedical LLP in {location}
+          </span>
+
+          <h2>
+            Trusted Laboratory & Hospital Equipment Supplier in {location}
+          </h2>
 
           <p>
-            Central Biomedicals is a trusted supplier of premium electrolyte
-            analyzer reagents in {location}, delivering reliable and high-quality
-            solutions for hospitals, pathology laboratories, diagnostic centers
-            and healthcare institutions. We provide compatible electrolyte
-            reagents for Roche 9180, ERBA EC 90, Medica EasyLyte, HDC Lyte,
-            Biosystem Diestro, Sensacore ST200 Aqua and other leading
-            electrolyte analyzers ensuring stable performance, accurate results
-            and reliable testing.
+            Human Biomedical LLP is a trusted supplier of laboratory instruments,
+            hospital equipment, diagnostic systems, pathology analyzers, medical
+            devices, laboratory consumables, and healthcare solutions in {location}.
+            We proudly serve hospitals, pathology laboratories, diagnostic centres,
+            research institutions, medical colleges, clinics, nursing homes, and
+            healthcare organizations with reliable products, competitive pricing,
+            expert technical support, and dependable delivery.
           </p>
         </div>
       </section>
@@ -86,27 +116,30 @@ export default function AboutPage({
           <div className="company-image">
             <img
               src={Aboutmain.src}
-              alt="Trusted Electrolyte Reagent Supplier in {location}"
+              alt={`Human Biomedical LLP - Laboratory & Hospital Equipment Supplier in ${location}`}
             />
           </div>
 
           <div className="company-content">
             <span>Who We Are</span>
 
-            <h2>Leading Supplier Of Electrolyte Analyzer Reagents In {location}</h2>
+            <h2>
+              Leading Supplier of Laboratory & Hospital Equipment in {location}
+            </h2>
 
             <p>
-              Central Biomedicals is a trusted supplier of premium electrolyte
-              analyzer reagents designed for hospitals, diagnostic centers,
-              pathology laboratories and healthcare institutions. Our goal is to
-              provide highly reliable and compatible electrolyte solutions that
-              deliver precise sodium, potassium and chloride testing results.
+              Human Biomedical LLP specializes in supplying high-quality laboratory
+              instruments, diagnostic equipment, hospital machines, pathology
+              analyzers, ICU & OT equipment, medical devices, laboratory
+              consumables, and healthcare solutions. Our mission is to support
+              healthcare professionals with dependable products that improve patient
+              care and laboratory efficiency.
             </p>
 
             <p>
-              We believe in quality, performance and customer trust. Our focus
-              is to provide premium-quality electrolyte reagents with fast
-              delivery, technical support and consistent laboratory accuracy.
+              We are committed to quality, innovation, customer satisfaction, and
+              long-term partnerships by providing trusted products, expert guidance,
+              timely delivery, and reliable after-sales support across {location}.
             </p>
           </div>
         </div>
@@ -116,23 +149,23 @@ export default function AboutPage({
       <section className="about-stats">
         <div className="container-custom stats-about-grid">
           <div className="stat-card">
-            <h2>10K+</h2>
-            <p>Reagents Delivered</p>
+            <h2>5000+</h2>
+            <p>Medical Products</p>
           </div>
 
           <div className="stat-card">
-            <h2>50k+</h2>
-            <p>Happy Clients</p>
+            <h2>1000+</h2>
+            <p>Hospitals & Laboratories Served</p>
           </div>
 
           <div className="stat-card">
             <h2>15+</h2>
-            <p>Years Experience</p>
+            <p>Years of Industry Experience</p>
           </div>
 
           <div className="stat-card">
             <h2>24/7</h2>
-            <p>Technical Support</p>
+            <p>Technical & After-Sales Support</p>
           </div>
         </div>
       </section>
@@ -144,9 +177,10 @@ export default function AboutPage({
             <h2>Our Mission</h2>
 
             <p>
-              To provide premium quality electrolyte analyzer reagents that
-              ensure accurate testing, stable performance and reliable
-              healthcare diagnostics for laboratories and hospitals.
+              To provide high-quality laboratory instruments, hospital equipment,
+              diagnostic systems, and healthcare solutions that help hospitals,
+              laboratories, and healthcare professionals deliver accurate diagnostics
+              and better patient care.
             </p>
           </div>
 
@@ -154,34 +188,48 @@ export default function AboutPage({
             <h2>Our Vision</h2>
 
             <p>
-              To become {location}'s most trusted electrolyte reagent supplier by
-              delivering innovation, quality products and unmatched customer
-              service.
+              To become one of the most trusted suppliers of laboratory and hospital
+              equipment in {location} by delivering innovative healthcare solutions,
+              premium-quality products, exceptional customer service, and long-term
+              value to healthcare institutions.
             </p>
           </div>
         </div>
       </section>
 
       {/* WHY CHOOSE */}
+      {/* WHY CHOOSE */}
       <section className="why-about">
         <div className="container-custom">
           <div className="section-heading">
-            <span>Why Choose Us</span>
-            <h2>Why Hospitals & Laboratories Trust Us</h2>
+            <span>Why Choose Human Biomedical LLP</span>
+            <h2>Why Hospitals, Laboratories & Healthcare Institutions Trust Us</h2>
           </div>
 
           <div className="why-grid-about">
-            <div className="why-card">🧪 Premium Quality Reagents</div>
+            <div className="why-card">
+              🏥 Premium Laboratory & Hospital Equipment
+            </div>
 
-            <div className="why-card">✅ Reliable Test Accuracy</div>
+            <div className="why-card">
+              ✅ Trusted Quality & Reliable Performance
+            </div>
 
-            <div className="why-card">🚚 Fast PAN India Delivery</div>
+            <div className="why-card">
+              🚚 Fast Delivery Across {location}
+            </div>
 
-            <div className="why-card">🎧 Technical Support</div>
+            <div className="why-card">
+              🎧 Expert Technical & After-Sales Support
+            </div>
 
-            <div className="why-card">🏥 Trusted By Hospitals</div>
+            <div className="why-card">
+              🔬 Wide Range of Medical & Diagnostic Products
+            </div>
 
-            <div className="why-card">⚡ Compatible With Leading Analyzers</div>
+            <div className="why-card">
+              🤝 Trusted Partner for Healthcare Institutions
+            </div>
           </div>
         </div>
       </section>
@@ -191,28 +239,40 @@ export default function AboutPage({
         <div className="container-custom">
           <div className="section-heading">
             <span>Our Journey</span>
-            <h2>Electrolyte Solutions We Specialize In {location}</h2>
+            <h2>Delivering Quality Healthcare Solutions in {location}</h2>
           </div>
 
           <div className="timeline">
             <div className="timeline-card">
-              <h3>2010</h3>
-              <p>Company Founded</p>
+              <h3>Foundation</h3>
+              <p>
+                Started with a vision to provide reliable laboratory and hospital
+                equipment for healthcare professionals.
+              </p>
             </div>
 
             <div className="timeline-card">
-              <h3>2015</h3>
-              <p>500+ Hospitals Served</p>
+              <h3>Growth</h3>
+              <p>
+                Expanded our portfolio with laboratory instruments, diagnostic
+                systems, medical devices, and healthcare solutions.
+              </p>
             </div>
 
             <div className="timeline-card">
-              <h3>2020</h3>
-              <p>Expanded Research Solutions</p>
+              <h3>Trusted Partner</h3>
+              <p>
+                Serving hospitals, pathology laboratories, diagnostic centres,
+                clinics, research institutes, and healthcare organizations.
+              </p>
             </div>
 
             <div className="timeline-card">
-              <h3>2025</h3>
-              <p>Leading Lab Supplier</p>
+              <h3>Today</h3>
+              <p>
+                Continuing to deliver premium medical equipment, competitive pricing,
+                expert support, and reliable healthcare solutions across {location}.
+              </p>
             </div>
           </div>
         </div>
@@ -221,11 +281,16 @@ export default function AboutPage({
       {/* CTA */}
       <section className="about-cta">
         <div className="container-custom cta-box-about">
-          <h2>Looking For Premium Electrolyte Reagents?</h2>
+          <h2>
+            Looking for Laboratory & Hospital Equipment?
+          </h2>
 
           <p>
-            Contact our experts for high-quality electrolyte analyzer reagents
-            with reliable quality and fast PAN {location} delivery.
+            Human Biomedical LLP offers a comprehensive range of laboratory
+            instruments, hospital equipment, diagnostic systems, pathology analyzers,
+            medical devices, laboratory consumables, and healthcare solutions. Contact
+            our team for expert guidance, competitive pricing, and reliable delivery
+            across {location}.
           </p>
 
           <Link

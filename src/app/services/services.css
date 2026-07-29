@@ -1,15 +1,18 @@
 /* HERO */
 
 .services-hero {
-  padding: 22px 0;
-  text-align: center;
+  padding: 130px 0 80px;
   background:
     radial-gradient(circle at top right,
-      rgba(15, 108, 189, .10),
-      transparent 30%),
-    linear-gradient(to bottom,
-      #f5faff,
-      #ffffff);
+      rgba(15, 108, 189, .08),
+      transparent 35%),
+    #f8fbff;
+}
+
+.services-hero .container-custom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .service-tag {
@@ -21,20 +24,20 @@
 }
 
 .services-hero h1 {
-  font-size: 68px;
-  line-height: 1.1;
-  max-width: 1250px;
-  margin: 25px auto;
+  font-size: 52px;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 900px;
+  margin: 24px auto 0;
 }
 
 .services-hero p {
-  max-width: 850px;
-  margin: auto;
-  color: #6b7280;
+  max-width: 900px;
+  margin: 20px auto 0;
+  font-size: 17px;
+  color: #64748b;
   line-height: 1.9;
-  font-size: 18px;
 }
-
 
 .seo-services {
   /* padding: 70px 0; */
@@ -60,12 +63,13 @@
 /* SERVICES */
 
 .services-section {
-  padding: 30px 0;
+  padding: 80px 0;
 }
 
 .section-heading {
+  max-width: 900px;
+  margin: 0 auto 70px;
   text-align: center;
-  margin-bottom: 60px;
 }
 
 .section-heading span {
@@ -74,8 +78,9 @@
 }
 
 .section-heading h2 {
-  font-size: 50px;
-  margin-top: 12px;
+  font-size: 52px;
+  line-height: 1.2;
+  margin-top: 18px;
 }
 
 .services-grid {
@@ -85,11 +90,10 @@
 }
 
 .service-card {
-  background: white;
-  border-radius: 35px;
-  padding: 40px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, .06);
-  transition: .35s ease;
+  padding: 35px;
+  border: 1px solid #edf2f7;
+  border-radius: 30px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
 }
 
 .service-card:hover {
@@ -113,7 +117,7 @@
 /* PROCESS */
 
 .process-section {
-  padding-bottom: 120px;
+  padding: 90px 0;
 }
 
 .process-grid {
@@ -146,7 +150,7 @@
 /* WHY */
 
 .why-service {
-  padding-bottom: 120px;
+  padding: 90px 0;
 }
 
 .why-grid-service {
@@ -208,7 +212,7 @@
 
   color: white;
   text-align: center;
-  border-radius: 45px;
+  border-radius: 36px;
   padding: 90px 40px;
 }
 

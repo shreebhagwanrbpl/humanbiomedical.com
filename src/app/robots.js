@@ -5,6 +5,6 @@ export default function robots() {
       allow: "/",
     },
     sitemap:
-      "https://qlyte.com/sitemap.xml",
+      "https://humanbiomedical.com/sitemap.xml",
   };
 }

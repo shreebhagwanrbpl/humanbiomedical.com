@@ -14,7 +14,7 @@ export async function generateMetadata({
     doc(
       db,
       "websites",
-      "qlyte",
+      "humanbiomedicalcom",
       "pages",
       "products"
     )
@@ -40,11 +40,11 @@ export async function generateMetadata({
     ? district.charAt(0).toUpperCase() + district.slice(1)
     : "India";
   const url = district
-    ? `https://qlyte.com/${district}/products/${slug}`
-    : `https://qlyte.com/products/${slug}`;
+    ? `https://humanbiomedical.com/${district}/products/${slug}`
+    : `https://humanbiomedical.com/products/${slug}`;
 
   return {
-    title: `${product.title} Supplier in ${location} | Dealer, Distributor & Exporter | Qlyte`,
+    title: `${product.title} Supplier in ${location} | Dealer, Distributor & Exporter | humanbiomedicalcom`,
 
     description: `Buy ${product.title} in ${location}. Trusted supplier of electrolyte analyzer reagents for hospitals, pathology labs, diagnostic centres and healthcare facilities across India.`,
 
@@ -74,10 +74,10 @@ export async function generateMetadata({
     },
 
     openGraph: {
-      title: `${product.title} Supplier in ${location} | Qlyte`,
+      title: `${product.title} Supplier in ${location} | humanbiomedicalcom`,
       description: `Trusted supplier of ${product.title} for hospitals and pathology labs in ${location}.`,
       url,
-      siteName: "Qlyte",
+      siteName: "humanbiomedicalcom",
       images: [
         {
           url:
@@ -99,7 +99,7 @@ export async function generateMetadata({
 
     twitter: {
       card: "summary_large_image",
-      title: `${product.title} | Qlyte`,
+      title: `${product.title} | humanbiomedicalcom`,
       description: `Buy ${product.title} in ${location}.`,
       images: [
         typeof product.image ===
@@ -132,7 +132,7 @@ export default async function ProductPage({
   const { district, slug } = await params;
 
   const snap = await getDoc(
-    doc(db, "websites", "qlyte", "pages", "products")
+    doc(db, "websites", "humanbiomedicalcom", "pages", "products")
   );
 
   const products = snap.exists()
@@ -157,7 +157,7 @@ export default async function ProductPage({
     image: product.image,
     brand: {
       "@type": "Brand",
-      name: "Qlyte",
+      name: "humanbiomedicalcom",
     },
     category:
       "Electrolyte Analyzer Reagent",
@@ -185,100 +185,37 @@ export default async function ProductPage({
 
         <div className="product-grid">
 
-          {/* Image */}
-          {/* <div className="product-image-box">
-
-            <img
-              src={
-                product.images?.[0] ||
-                product.image ||
-                "/images/products/default.webp"
-              }
-              alt={product.title}
-            />
-
-            {(product.images?.length > 1 ||
-              product.video ||
-              product.pdf) && (
-
-                <div className="media-gallery">
-
-                  {product.images?.map((img, index) => (
-                    <img
-                      key={index}
-                      src={img}
-                      alt={`${product.title}-${index}`}
-                      className="thumb-image"
-                    />
-                  ))}
-
-                  {product.video && (
-                    <a
-                      href={product.video}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="media-btn"
-                    >
-                      🎥 Watch Video
-                    </a>
-                  )}
-
-                  {product.pdf && (
-                    <a
-                      href={product.pdf}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="media-btn"
-                    >
-                      📄 Product PDF
-                    </a>
-                  )}
-
-                </div>
-
-              )}
-
-          </div> */}
+          {/* Product Gallery */}
           <ProductGallery product={product} />
-          {/* Content */}
+
+          {/* Product Content */}
           <div className="product-content">
 
             <span className="product-tag">
-              Available in{" "}
-              {district || "India"}
+              Available in {district || "India"}
             </span>
 
             <h1>
-              {product.title} Electrolyte Reagent in {district || "India"}
+              {product.title} in {district || "India"}
             </h1>
 
             <p>
-              {product.desc}. Trusted
-              supplier of{" "}
-              {product.title} for
-              hospitals, pathology labs
-              and healthcare centres in{" "}
-              {district || "India"}.
+              {product.desc ||
+                `${product.title} is a high-quality laboratory and hospital equipment supplied by Human Biomedical LLP. Designed for reliable performance, it is widely used in hospitals, diagnostic centres, pathology laboratories, research institutions, clinics, and healthcare facilities across ${district || "India"}.`}
             </p>
 
             <div className="product-features">
-              <span>
-                ✔ Premium Quality
-              </span>
+              <span>✔ Premium Quality Product</span>
 
-              <span>
-                ✔ Fast Delivery
-              </span>
+              <span>✔ Fast & Secure Delivery</span>
 
-              <span>
-                ✔ Technical Support
-              </span>
+              <span>✔ Expert Technical Support</span>
 
-              <span>
-                ✔ Accurate Results
-              </span>
+              <span>✔ Trusted Performance</span>
             </div>
+
             <div className="product-details">
+
               {product.title && (
                 <p>
                   <strong>Product:</strong> {product.title}
@@ -296,7 +233,45 @@ export default async function ProductPage({
                   <strong>Instrument:</strong> {product.instrument}
                 </p>
               )}
+
+              {product.model && (
+                <p>
+                  <strong>Model:</strong> {product.model}
+                </p>
+              )}
+
+              {product.usage && (
+                <p>
+                  <strong>Application:</strong> {product.usage}
+                </p>
+              )}
+
+              {product.parameters && (
+                <p>
+                  <strong>Parameters:</strong> {product.parameters}
+                </p>
+              )}
+
+              {product.throughput && (
+                <p>
+                  <strong>Throughput:</strong> {product.throughput}
+                </p>
+              )}
+
+              {product.automation && (
+                <p>
+                  <strong>Automation:</strong> {product.automation}
+                </p>
+              )}
+
+              {product.availability && (
+                <p>
+                  <strong>Availability:</strong> {product.availability}
+                </p>
+              )}
+
             </div>
+
             <div className="product-btns">
 
               <GetQuoteForm />
@@ -313,30 +288,30 @@ export default async function ProductPage({
               </Link>
 
             </div>
+
           </div>
+
         </div>
 
         {/* Info Section */}
         <div className="info-box">
 
           <h2>
-            Electrolyte Reagent Supplier
-            in {district || "India"}
+            Trusted Laboratory & Hospital Equipment Supplier in {district || "India"}
           </h2>
 
           <p>
-            We provide premium quality{" "}
-            {product.title} electrolyte
-            reagent for hospitals,
-            pathology laboratories and
-            diagnostic centres in{" "}
-            {district || "India"}.
-            Trusted quality, stable
-            performance, competitive
-            pricing and fast delivery.
+            Human Biomedical LLP is a trusted supplier of <strong>{product.title}</strong> in{" "}
+            {district || "India"}. We provide high-quality laboratory instruments,
+            hospital equipment, diagnostic systems, medical devices, and healthcare
+            solutions for hospitals, pathology laboratories, diagnostic centres,
+            research institutions, clinics, and healthcare organizations. Our focus is
+            on quality products, competitive pricing, expert technical support, and
+            timely delivery.
           </p>
 
         </div>
+
         <div className="seo-content">
 
           <h2>
@@ -344,9 +319,11 @@ export default async function ProductPage({
           </h2>
 
           <p>
-            Qlyte is a trusted supplier of {product.title} in {district || "India"}.
-            We provide premium quality electrolyte analyzer reagents for hospitals,
-            pathology laboratories, diagnostic centres and healthcare institutions.
+            Human Biomedical LLP is a trusted supplier of <strong>{product.title}</strong> in{" "}
+            {district || "India"}. We offer reliable laboratory and hospital equipment
+            for hospitals, diagnostic centres, pathology laboratories, medical colleges,
+            research institutions, and healthcare organizations with dependable quality
+            and professional support.
           </p>
 
           <h2>
@@ -354,10 +331,11 @@ export default async function ProductPage({
           </h2>
 
           <p>
-            Our {product.title} is designed for accurate and reliable performance.
-            Laboratories across {district || "India"} trust our products for
-            consistent results, longer shelf life and compatibility with leading
-            analyzer systems.
+            Our <strong>{product.title}</strong> is selected for its reliable
+            performance, quality construction, and suitability for modern healthcare
+            environments. Human Biomedical LLP is committed to providing premium medical
+            equipment backed by competitive pricing, expert guidance, and dependable
+            after-sales support.
           </p>
 
           <h2>
@@ -365,9 +343,10 @@ export default async function ProductPage({
           </h2>
 
           <p>
-            We are a reputed dealer and supplier of {product.title} in
-            {district || "India"} offering genuine products, technical support
-            and fast delivery services.
+            Human Biomedical LLP is a reliable dealer and supplier of{" "}
+            <strong>{product.title}</strong> in {district || "India"}, serving
+            hospitals, laboratories, clinics, diagnostic centres, research institutes,
+            and healthcare facilities with genuine products and timely delivery.
           </p>
 
           <h2>
@@ -375,16 +354,18 @@ export default async function ProductPage({
           </h2>
 
           <ul>
-            <li>Hospitals</li>
-            <li>Pathology Laboratories</li>
+            <li>Hospitals & Healthcare Institutions</li>
             <li>Diagnostic Centres</li>
-            <li>Medical Colleges</li>
+            <li>Pathology Laboratories</li>
             <li>Research Laboratories</li>
-            <li>Healthcare Institutions</li>
+            <li>Medical Colleges & Universities</li>
+            <li>Clinics & Nursing Homes</li>
+            <li>Blood Banks</li>
+            <li>Pharmaceutical & Biotechnology Laboratories</li>
           </ul>
 
           <h2>
-            FAQ - {product.title} in {district || "India"}
+            Frequently Asked Questions
           </h2>
 
           <h3>
@@ -392,8 +373,9 @@ export default async function ProductPage({
           </h3>
 
           <p>
-            {product.title} is used for electrolyte testing and laboratory
-            diagnostic applications.
+            {product.title} is used in hospitals, laboratories, diagnostic centres,
+            research institutions, and other healthcare facilities depending on its
+            intended medical or laboratory application.
           </p>
 
           <h3>
@@ -401,8 +383,28 @@ export default async function ProductPage({
           </h3>
 
           <p>
-            Yes, we provide delivery and support services across
-            {district || "India"}.
+            Yes. Human Biomedical LLP provides safe and timely delivery of{" "}
+            {product.title} across {district || "India"} along with professional
+            customer support.
+          </p>
+
+          <h3>
+            Do you provide technical support?
+          </h3>
+
+          <p>
+            Yes. We offer expert technical guidance and after-sales support for
+            laboratory and hospital equipment to help ensure smooth installation and
+            operation.
+          </p>
+
+          <h3>
+            Can I request a quotation for {product.title}?
+          </h3>
+
+          <p>
+            Absolutely. You can contact Human Biomedical LLP to receive a customized
+            quotation based on your laboratory or hospital requirements.
           </p>
 
         </div>

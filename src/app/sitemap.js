@@ -15,7 +15,7 @@ export default async function sitemap() {
         doc(
           db,
           "websites",
-          "qlyte",
+          "humanbiomedicalcom",
           "pages",
           "products"
         )
@@ -33,7 +33,7 @@ export default async function sitemap() {
         collection(
           db,
           "websites",
-          "qlyte",
+          "humanbiomedicalcom",
           "districts"
         )
       );
@@ -51,7 +51,7 @@ export default async function sitemap() {
     // Product URLs
     const productUrls =
       products.map((product) => ({
-        url: `https://qlyte.com/products/${product.slug}`,
+        url: `https://humanbiomedical.com/products/${product.slug}`,
         lastModified:
           new Date(),
         priority: 0.9,
@@ -63,7 +63,7 @@ export default async function sitemap() {
         (district) =>
           products.map(
             (product) => ({
-              url: `https://qlyte.com/${district}/products/${product.slug}`,
+              url: `https://humanbiomedical.com/${district}/products/${product.slug}`,
               lastModified:
                 new Date(),
               priority: 0.8,
@@ -73,7 +73,7 @@ export default async function sitemap() {
 
     return [
       {
-        url: "https://qlyte.com",
+        url: "https://humanbiomedical.com",
         lastModified:
           new Date(),
         priority: 1,
@@ -90,7 +90,7 @@ export default async function sitemap() {
 
     return [
       {
-        url: "https://qlyte.com",
+        url: "https://humanbiomedical.com",
         lastModified:
           new Date(),
         priority: 1,

@@ -17,11 +17,11 @@
 //       : "India";
 
 //   const url = district
-//     ? `https://qlyte.com/${district}/contact`
-//     : `https://qlyte.com/contact`;
+//     ? `https://humanbiomedical.com/${district}/contact`
+//     : `https://humanbiomedical.com/contact`;
 
 //   return {
-//     title: `Electrolyte Reagent Supplier Contact in ${location} | Qlyte`,
+//     title: `Electrolyte Reagent Supplier Contact in ${location} | humanbiomedicalcom`,
 
 //     description: `Contact trusted electrolyte reagent supplier in ${location}. Get premium Roche 9180, ERBA EC 90, Medica EasyLyte and compatible electrolyte analyzer reagents.`,
 
@@ -43,7 +43,7 @@
 //       title: `Electrolyte Supplier in ${location}`,
 //       description: `Trusted electrolyte reagent supplier in ${location}.`,
 //       url,
-//       siteName: "Qlyte",
+//       siteName: "humanbiomedicalcom",
 //       locale: "en_IN",
 //       type: "website",
 //     },
@@ -87,7 +87,7 @@
 //     const loadContact = async () => {
 //       try {
 //         const snap = await getDoc(
-//           doc(db, "websites", "qlyte", "pages", "contact")
+//           doc(db, "websites", "humanbiomedicalcom", "pages", "contact")
 //         );
 
 //         if (snap.exists()) {
@@ -163,7 +163,7 @@
 //                 ✉️
 //                 <div>
 //                   <h4>Email Us</h4>
-//                   <p>{getValue("email") || "info@qlyte.com"}</p>
+//                   <p>{getValue("email") || "info@humanbiomedical.com"}</p>
 //                 </div>
 //               </div>
 //             </div>
@@ -241,11 +241,11 @@
 //     : "India";
 
 //   const url = district
-//     ? `https://qlyte.com/${district}/contact`
-//     : `https://qlyte.com/contact`;
+//     ? `https://humanbiomedical.com/${district}/contact`
+//     : `https://humanbiomedical.com/contact`;
 
 //   return {
-//     title: `Electrolyte Reagent Supplier Contact in ${location} | Qlyte`,
+//     title: `Electrolyte Reagent Supplier Contact in ${location} | humanbiomedicalcom`,
 
 //     description: `Contact trusted electrolyte reagent supplier in ${location}. Get premium Roche 9180, ERBA EC 90, Medica EasyLyte and compatible electrolyte analyzer reagents.`,
 
@@ -263,7 +263,7 @@
 //       title: `Electrolyte Supplier in ${location}`,
 //       description: `Trusted electrolyte reagent supplier in ${location}.`,
 //       url,
-//       siteName: "Qlyte",
+//       siteName: "humanbiomedicalcom",
 //       locale: "en_IN",
 //       type: "website",
 //     },
