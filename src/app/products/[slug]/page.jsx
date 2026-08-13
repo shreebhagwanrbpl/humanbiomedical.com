@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import GetQuoteForm from "@/components/GetQuoteForm";
+import DownloadBrochureBtn from "@/components/DownloadBrochureBtn";
 import "../product-details.css";
 import ProductGallery from "./ProductGallery";
 
@@ -388,6 +389,8 @@ export default async function ProductPage({
             <div className="product-btns">
 
               <GetQuoteForm />
+
+              <DownloadBrochureBtn product={product} />
 
               <Link
                 href={

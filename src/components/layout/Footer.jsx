@@ -139,41 +139,41 @@ export default function Footer({
             </p>
 
             <div className="social-icons">
-              <a
+              {/* <a
                 href="https://www.facebook.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
               >
                 <FaFacebookF />
-              </a>
+              </a> */}
 
-              <a
-                href="https://www.instagram.com/"
+              {<a
+                href="https://www.instagram.com/humanbiomedicals/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
               >
                 <FaInstagram />
-              </a>
+              </a>}
 
-              <a
+              {/* <a
                 href="https://www.linkedin.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
               >
                 <FaLinkedinIn />
-              </a>
+              </a> */}
 
-              <a
+              {/* <a
                 href="https://www.youtube.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="YouTube"
               >
                 <FaYoutube />
-              </a>
+              </a> */}
             </div>
 
           </div>
@@ -238,7 +238,7 @@ export default function Footer({
             <h3>Contact Info</h3>
 
             <p>
-              📍 {getValue("office")}
+              📍 {getValue("address")}
             </p>
 
             <p>

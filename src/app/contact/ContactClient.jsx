@@ -198,7 +198,7 @@ export default function ContactClient({
                                 <div>
                                     <h4>Office Address</h4>
                                     <p>
-                                        {getValue("Office") || Office}
+                                        {getValue("Address") || Office}
                                     </p>
                                 </div>
                             </div>
