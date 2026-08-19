@@ -1,99 +1,88 @@
-export const dynamic = "force-static";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-} from "firebase/firestore";
+import { getAllProducts, getAllCategories, getAllBrands } from "@/lib/data/products";
+import { getAllDistricts } from "@/lib/data/districts";
+
+export const revalidate = 86400; // 24 hours
 
 export default async function sitemap() {
+  const baseUrl = "https://humanbiomedical.com";
+
   try {
-    // Products Fetch
-    const productSnap =
-      await getDoc(
-        doc(
-          db,
-          "websites",
-          "humanbiomedicalcom",
-          "pages",
-          "products"
-        )
-      );
+    const [products, categories, brands, districts] = await Promise.all([
+      getAllProducts(),
+      getAllCategories(),
+      getAllBrands(),
+      getAllDistricts(),
+    ]);
 
-    const products =
-      productSnap.exists()
-        ? productSnap.data()
-          .products || []
-        : [];
+    // 1. Static High-Priority Core Pages
+    const staticPages = [
+      "",
+      "/products",
+      "/about",
+      "/services",
+      "/contact",
+    ].map((route) => ({
+      url: `${baseUrl}${route}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: route === "" ? 1.0 : 0.9,
+    }));
 
-    // Districts Fetch Dynamic
-    const districtSnapshot =
-      await getDocs(
-        collection(
-          db,
-          "websites",
-          "humanbiomedicalcom",
-          "districts"
-        )
-      );
+    // 2. Primary Authoritative Product Pages
+    const productUrls = products.map((product) => ({
+      url: `${baseUrl}/products/${product.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    }));
 
-    const districts =
-      districtSnapshot.docs.map(
-        (doc) => doc.id
-      );
+    // 3. Category Hub Pages
+    const categoryUrls = categories.map((cat) => ({
+      url: `${baseUrl}/category/${cat.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }));
 
-    console.log(
-      "Total Districts:",
-      districts.length
-    );
+    // 4. Brand Hub Pages
+    const brandUrls = brands.map((brand) => ({
+      url: `${baseUrl}/brand/${brand.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    }));
 
-    // Product URLs
-    const productUrls =
-      products.map((product) => ({
-        url: `https://humanbiomedical.com/products/${product.slug}`,
-        lastModified:
-          new Date(),
-        priority: 0.9,
-      }));
+    // 5. Verified District Landing Pages
+    const districtUrls = districts.map((d) => ({
+      url: `${baseUrl}/${d.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    }));
 
-    // District + Product URLs
-    const districtProductUrls =
-      districts.flatMap(
-        (district) =>
-          products.map(
-            (product) => ({
-              url: `https://humanbiomedical.com/${district}/products/${product.slug}`,
-              lastModified:
-                new Date(),
-              priority: 0.8,
-            })
-          )
-      );
+    // 6. Verified District Products Catalog Pages
+    const districtProductCatalogUrls = districts.map((d) => ({
+      url: `${baseUrl}/${d.slug}/products`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    }));
 
     return [
-      {
-        url: "https://humanbiomedical.com",
-        lastModified:
-          new Date(),
-        priority: 1,
-      },
-
+      ...staticPages,
       ...productUrls,
-      ...districtProductUrls,
+      ...categoryUrls,
+      ...brandUrls,
+      ...districtUrls,
+      ...districtProductCatalogUrls,
     ];
   } catch (error) {
-    console.error(
-      "Sitemap Error:",
-      error
-    );
-
+    console.error("Sitemap generation error:", error);
     return [
       {
-        url: "https://humanbiomedical.com",
-        lastModified:
-          new Date(),
-        priority: 1,
+        url: baseUrl,
+        lastModified: new Date(),
+        priority: 1.0,
       },
     ];
   }

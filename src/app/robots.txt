@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap:
-https://humanbiomedical.com/sitemap.xml
