@@ -4,214 +4,65 @@ import GetQuoteForm from "@/components/GetQuoteForm";
 import DownloadBrochureBtn from "@/components/DownloadBrochureBtn";
 import "../product-details.css";
 import ProductGallery from "./ProductGallery";
+import { getProductBySlug, getAllProducts, slugify } from "@/lib/data/products";
+import { getDistrictBySlug, getAllDistricts } from "@/lib/data/districts";
+import {
+  generateProductSchema,
+  generateBreadcrumbSchema,
+  generateFAQSchema,
+} from "@/lib/seo/schema";
 
-const findProduct = (products, slug) => {
-  const decoded = decodeURIComponent(slug).toLowerCase();
-  return products.find((item) => {
-    const titleMatch = item.title && item.title.toLowerCase() === decoded;
-    const slugifiedTitle = item.title && item.title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
-    const slugMatch = item.slug && item.slug.toLowerCase() === decoded;
-    return titleMatch || slugMatch || slugifiedTitle === decoded;
-  });
-};
-
-const PROJECT_ID = "rajbiosis-central";
-const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-
-function parseFirestoreFields(fields) {
-  const obj = {};
-  if (!fields) return obj;
-  for (const [key, value] of Object.entries(fields)) {
-    if ("stringValue" in value) {
-      obj[key] = value.stringValue;
-    } else if ("booleanValue" in value) {
-      obj[key] = value.booleanValue;
-    } else if ("integerValue" in value) {
-      obj[key] = parseInt(value.integerValue, 10);
-    } else if ("doubleValue" in value) {
-      obj[key] = parseFloat(value.doubleValue);
-    } else if ("arrayValue" in value) {
-      const values = value.arrayValue.values || [];
-      obj[key] = values.map(val => {
-        if ("stringValue" in val) return val.stringValue;
-        if ("mapValue" in val) return parseFirestoreFields(val.mapValue.fields);
-        return val;
-      });
-    } else if ("mapValue" in value) {
-      obj[key] = parseFirestoreFields(value.mapValue.fields);
-    }
-  }
-  return obj;
-}
-
-let serverProductsCache = null;
-let serverCacheTimestamp = 0;
-let activeProductsPromise = null;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours cache
-
-async function getAllProducts() {
-  const now = Date.now();
-  if (serverProductsCache && (now - serverCacheTimestamp < CACHE_TTL)) {
-    return serverProductsCache;
-  }
-
-  if (activeProductsPromise) {
-    return activeProductsPromise;
-  }
-
-  activeProductsPromise = (async () => {
-    try {
-      // 1. Fetch normal and category snapshots in parallel via REST API
-      const [prodRes, catRes] = await Promise.all([
-        fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/products`),
-        fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories`)
-      ]);
-
-      const [prodData, catData] = await Promise.all([
-        prodRes.json(),
-        catRes.json()
-      ]);
-
-      let publishedProducts = [];
-      if (prodRes.status === 200 && prodData.fields) {
-        const parsedData = parseFirestoreFields(prodData.fields);
-        const allProducts = parsedData.products || [];
-        publishedProducts = allProducts.filter((item) => item.isPublished);
-      }
-
-      let categoryProducts = [];
-      if (catRes.status === 200 && catData.documents) {
-        // Fetch subcategories for all categories in parallel
-        const subcategoryPromises = catData.documents.map(async (categoryDoc) => {
-          const categoryFields = parseFirestoreFields(categoryDoc.fields);
-          const categoryId = categoryDoc.name.split("/").pop();
-
-          try {
-            const subRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories/${categoryId}/subcategories`);
-            if (subRes.status !== 200) return [];
-            
-            const subData = await subRes.json();
-            const docs = subData.documents || [];
-            
-            const list = [];
-            docs.forEach((subDoc) => {
-              const subFields = parseFirestoreFields(subDoc.fields);
-              (subFields.products || []).forEach((item) => {
-                if (item.isPublished) {
-                  list.push({
-                    ...item,
-                    category: categoryFields.category,
-                    subCategory: subFields.subCategory,
-                  });
-                }
-              });
-            });
-            return list;
-          } catch (err) {
-            console.error(`Failed to fetch subcategories for category ${categoryId}:`, err);
-            return [];
-          }
-        });
-
-        const subcategoryResults = await Promise.all(subcategoryPromises);
-        categoryProducts = subcategoryResults.flat();
-      }
-
-      const allMergedProducts = [
-        ...publishedProducts,
-        ...categoryProducts,
-      ];
-
-      // Store in global memory cache
-      serverProductsCache = allMergedProducts;
-      serverCacheTimestamp = Date.now();
-
-      return allMergedProducts;
-    } catch (error) {
-      console.error("Error fetching all products via REST API:", error);
-      // Return stale cache if DB query fails
-      if (serverProductsCache) {
-        return serverProductsCache;
-      }
-      return [];
-    } finally {
-      activeProductsPromise = null;
-    }
-  })();
-
-  return activeProductsPromise;
-}
-
-// Warm cache in the background immediately
-getAllProducts().catch(err => console.error("Failed to warm products cache on startup:", err));
-
-export async function generateMetadata({
-  params,
-}) {
-  const { slug, district } = await params;
-
+export async function generateStaticParams() {
   const products = await getAllProducts();
-  const product = findProduct(products, slug);
+  return products.map((p) => ({ slug: p.slug }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug, district } = await params;
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return {
       title: "Product Not Found",
-      description:
-        "The requested product could not be found.",
+      description: "The requested product could not be found.",
     };
   }
-  const location = district
-    ? district.charAt(0).toUpperCase() + district.slice(1)
-    : "India";
-  const url = district
-    ? `https://humanbiomedical.com/${district}/products/${slug}`
-    : `https://humanbiomedical.com/products/${slug}`;
+
+  let locationName = "India";
+  if (district) {
+    const dObj = await getDistrictBySlug(district);
+    locationName = dObj ? dObj.district : district.charAt(0).toUpperCase() + district.slice(1);
+  }
+
+  const title = district
+    ? `${product.title} Supplier in ${locationName} | Human Biomedical LLP`
+    : `${product.title} | Biomedical & Laboratory Equipment Supplier`;
+
+  const description = `Buy ${product.title} in ${locationName}. Supplied by Human Biomedical LLP for hospitals, pathology labs, and diagnostic centres with genuine warranty, quotation, and technical support.`;
+
+  const canonical = district
+    ? `https://humanbiomedical.com/${district}/products/${product.slug}`
+    : `https://humanbiomedical.com/products/${product.slug}`;
+
+  const ogImage =
+    typeof product.image === "string" && product.image.startsWith("http")
+      ? product.image
+      : "https://humanbiomedical.com/humanlogo.png";
 
   return {
-    title: `${product.title} Supplier in ${location} | Dealer, Distributor & Exporter | humanbiomedicalcom`,
-
-    description: `Buy ${product.title} in ${location}. Trusted supplier of electrolyte analyzer reagents for hospitals, pathology labs, diagnostic centres and healthcare facilities across India.`,
-
-    keywords: [
-      product.title,
-      `${product.title} supplier in ${location}`,
-      `${product.title} dealer in ${location}`,
-      `${product.title} manufacturer in ${location}`,
-      `${product.title} exporter in ${location}`,
-      `${product.title} price in ${location}`,
-      `Buy ${product.title} in ${location}`,
-      `${product.title} near me`,
-      `${product.title} supplier`,
-      `Electrolyte Reagent Supplier`,
-      `Electrolyte Analyzer Reagent`,
-      `Clinical Chemistry Reagent`,
-      `Laboratory Reagent Supplier`,
-      `Hospital Lab Reagent`,
-      `Diagnostic Reagent Supplier`,
-      `${location} Medical Supplier`,
-      `${location} Pathology Lab Supplier`,
-      `${location} Diagnostic Equipment Supplier`,
-    ],
-
+    title,
+    description,
     alternates: {
-      canonical: url,
+      canonical,
     },
-
     openGraph: {
-      title: `${product.title} Supplier in ${location} | humanbiomedicalcom`,
-      description: `Trusted supplier of ${product.title} for hospitals and pathology labs in ${location}.`,
-      url,
-      siteName: "humanbiomedicalcom",
+      title: `${product.title} Supplier in ${locationName}`,
+      description,
+      url: canonical,
+      siteName: "Human Biomedical LLP",
       images: [
         {
-          url:
-            typeof product.image ===
-              "string" &&
-              product.image.startsWith(
-                "http"
-              )
-              ? product.image
-              : "/images/products/default.webp",
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: product.title,
@@ -220,309 +71,248 @@ export async function generateMetadata({
       locale: "en_IN",
       type: "website",
     },
-
     twitter: {
       card: "summary_large_image",
-      title: `${product.title} | humanbiomedicalcom`,
-      description: `Buy ${product.title} in ${location}.`,
-      images: [
-        typeof product.image ===
-          "string" &&
-          product.image.startsWith("http")
-          ? product.image
-          : "/images/products/default.webp",
-      ],
-    },
-
-    robots: {
-      index: true,
-      follow: true,
-      nocache: false,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-video-preview": -1,
-        "max-image-preview":
-          "large",
-        "max-snippet": -1,
-      },
+      title: `${product.title} | Human Biomedical LLP`,
+      description,
+      images: [ogImage],
     },
   };
 }
 
-export default async function ProductPage({
-  params,
-}) {
-  const { district, slug } = await params;
-
-  const products = await getAllProducts();
-  const product = findProduct(products, slug);
+export default async function ProductPage({ params }) {
+  const { slug, district } = await params;
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
   }
 
-  const schemaData = {
-    "@context":
-      "https://schema.org",
-    "@type": "Product",
-    name: product.title,
-    description: product.desc,
-    image: product.image,
-    brand: {
-      "@type": "Brand",
-      name: "humanbiomedicalcom",
+  let locationName = "India";
+  if (district) {
+    const dObj = await getDistrictBySlug(district);
+    locationName = dObj ? dObj.district : district.charAt(0).toUpperCase() + district.slice(1);
+  }
+
+  const allProducts = await getAllProducts();
+  const allDistricts = await getAllDistricts();
+
+  const relatedProducts = allProducts
+    .filter((p) => p.slug !== product.slug && (p.category === product.category || p.brand === product.brand))
+    .slice(0, 4);
+
+  const topDistricts = allDistricts.slice(0, 8);
+
+  const canonicalUrl = district
+    ? `https://humanbiomedical.com/${district}/products/${product.slug}`
+    : `https://humanbiomedical.com/products/${product.slug}`;
+
+  const productSchema = generateProductSchema(product, canonicalUrl);
+  const breadcrumbs = [
+    { name: "Home", url: "/" },
+    { name: "Products", url: "/products" },
+  ];
+  if (product.category) {
+    breadcrumbs.push({
+      name: product.category,
+      url: `/category/${slugify(product.category)}`,
+    });
+  }
+  breadcrumbs.push({ name: product.title, url: `/products/${product.slug}` });
+
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbs);
+
+  const faqs = [
+    {
+      question: `What is ${product.title} used for?`,
+      answer: `${product.title} is designed for medical laboratories, hospitals, diagnostic centres, and pathology labs for accurate testing and clinical diagnostics.`,
     },
-    category:
-      "Electrolyte Analyzer Reagent",
-    offers: {
-      "@type": "Offer",
-      availability:
-        "https://schema.org/InStock",
-      priceCurrency: "INR",
+    {
+      question: `Do you provide installation and supply in ${locationName}?`,
+      answer: `Yes. Human Biomedical LLP provides doorstep delivery, installation guidance, and technical support across ${locationName} and nationwide.`,
     },
-  };
+    {
+      question: `How can I request a quotation for ${product.title}?`,
+      answer: `You can submit an online quotation request on this page or contact our customer support team directly.`,
+    },
+  ];
+  const faqSchema = generateFAQSchema(faqs);
+
+  const categorySlug = product.category ? slugify(product.category) : null;
+  const brandSlug = product.brand ? slugify(product.brand) : null;
 
   return (
     <section className="product-page">
-
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            schemaData
-          ),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
 
-      <div className="container-custom">
+      <div className="container-custom py-8">
+        {/* Visual Breadcrumb Navigation */}
+        <nav className="flex text-sm text-slate-500 mb-6 gap-2 items-center flex-wrap">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <span>/</span>
+          <Link href="/products" className="hover:text-blue-600">Products</Link>
+          {categorySlug && (
+            <>
+              <span>/</span>
+              <Link href={`/category/${categorySlug}`} className="hover:text-blue-600">
+                {product.category}
+              </Link>
+            </>
+          )}
+          <span>/</span>
+          <span className="text-slate-900 font-semibold">{product.title}</span>
+        </nav>
 
         <div className="product-grid">
-
-          {/* Product Gallery */}
+          {/* Gallery */}
           <ProductGallery product={product} />
 
-          {/* Product Content */}
+          {/* Product Info */}
           <div className="product-content">
+            <span className="product-tag">Available in {locationName}</span>
 
-            <span className="product-tag">
-              Available in {district || "India"}
-            </span>
-
-            <h1>
-              {product.title} in {district || "India"}
+            <h1 className="text-3xl font-bold text-slate-900 mt-2 mb-4">
+              {product.title} {district ? `in ${locationName}` : ""}
             </h1>
 
-            <p>
+            <p className="text-slate-700 leading-relaxed mb-6">
               {product.desc ||
-                `${product.title} is a high-quality laboratory and hospital equipment supplied by Human Biomedical LLP. Designed for reliable performance, it is widely used in hospitals, diagnostic centres, pathology laboratories, research institutions, clinics, and healthcare facilities across ${district || "India"}.`}
+                `${product.title} is a high-performance biomedical instrument supplied by Human Biomedical LLP. Specially designed for high accuracy and compliance in diagnostic centres, hospitals, and clinical labs across ${locationName}.`}
             </p>
 
-            <div className="product-features">
-              <span>✔ Premium Quality Product</span>
-
-              <span>✔ Fast & Secure Delivery</span>
-
-              <span>✔ Expert Technical Support</span>
-
-              <span>✔ Trusted Performance</span>
+            <div className="product-features grid grid-cols-2 gap-3 mb-6">
+              <span className="text-sm font-medium text-slate-800 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                ✔ 100% Genuine Quality
+              </span>
+              <span className="text-sm font-medium text-slate-800 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                ✔ Fast & Secure Delivery
+              </span>
+              <span className="text-sm font-medium text-slate-800 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                ✔ Technical AMC Support
+              </span>
+              <span className="text-sm font-medium text-slate-800 bg-slate-50 p-2 rounded-xl border border-slate-100 flex items-center gap-2">
+                ✔ Easy Quotation Request
+              </span>
             </div>
 
-            <div className="product-details">
-
-              {product.title && (
-                <p>
-                  <strong>Product:</strong> {product.title}
-                </p>
-              )}
-
+            <div className="product-details bg-slate-50 p-6 rounded-2xl border border-slate-200/80 mb-6 space-y-2 text-sm text-slate-700">
               {product.brand && (
                 <p>
-                  <strong>Brand:</strong> {product.brand}
+                  <strong>Brand:</strong>{" "}
+                  <Link href={`/brand/${brandSlug}`} className="text-blue-600 hover:underline">
+                    {product.brand}
+                  </Link>
                 </p>
               )}
-
-              {product.instrument && (
+              {product.category && (
                 <p>
-                  <strong>Instrument:</strong> {product.instrument}
+                  <strong>Category:</strong>{" "}
+                  <Link href={`/category/${categorySlug}`} className="text-blue-600 hover:underline">
+                    {product.category}
+                  </Link>
                 </p>
               )}
-
-              {product.model && (
-                <p>
-                  <strong>Model:</strong> {product.model}
-                </p>
-              )}
-
-              {product.usage && (
-                <p>
-                  <strong>Application:</strong> {product.usage}
-                </p>
-              )}
-
-              {product.parameters && (
-                <p>
-                  <strong>Parameters:</strong> {product.parameters}
-                </p>
-              )}
-
-              {product.throughput && (
-                <p>
-                  <strong>Throughput:</strong> {product.throughput}
-                </p>
-              )}
-
-              {product.automation && (
-                <p>
-                  <strong>Automation:</strong> {product.automation}
-                </p>
-              )}
-
-              {product.availability && (
-                <p>
-                  <strong>Availability:</strong> {product.availability}
-                </p>
-              )}
-
+              {product.model && <p><strong>Model:</strong> {product.model}</p>}
+              {product.instrument && <p><strong>Instrument Type:</strong> {product.instrument}</p>}
+              {product.throughput && <p><strong>Throughput:</strong> {product.throughput}</p>}
+              {product.automation && <p><strong>Automation Level:</strong> {product.automation}</p>}
+              {product.availability && <p><strong>Availability:</strong> {product.availability}</p>}
             </div>
 
-            <div className="product-btns">
-
+            <div className="product-btns flex flex-wrap gap-4 items-center">
               <GetQuoteForm />
-
               <DownloadBrochureBtn product={product} />
-
               <Link
-                href={
-                  district
-                    ? `/${district}/contact`
-                    : "/contact"
-                }
+                href={district ? `/${district}/contact` : "/contact"}
                 className="secondary-btn"
               >
-                Contact Us
+                Contact Sales
               </Link>
-
             </div>
-
           </div>
-
         </div>
 
-        {/* Info Section */}
-        <div className="info-box">
-
-          <h2>
-            Trusted Laboratory & Hospital Equipment Supplier in {district || "India"}
+        {/* Informational SEO Content Section */}
+        <div className="seo-content mt-16 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+          <h2 className="text-2xl font-bold text-slate-900">
+            Trusted {product.title} Supplier in {locationName}
           </h2>
-
-          <p>
-            Human Biomedical LLP is a trusted supplier of <strong>{product.title}</strong> in{" "}
-            {district || "India"}. We provide high-quality laboratory instruments,
-            hospital equipment, diagnostic systems, medical devices, and healthcare
-            solutions for hospitals, pathology laboratories, diagnostic centres,
-            research institutions, clinics, and healthcare organizations. Our focus is
-            on quality products, competitive pricing, expert technical support, and
-            timely delivery.
+          <p className="text-slate-700 leading-relaxed">
+            Human Biomedical LLP is a premier distributor and supplier of <strong>{product.title}</strong> in {locationName}.
+            We serve healthcare institutions, medical colleges, pathology centers, and research labs with certified, robust diagnostic equipment.
           </p>
 
-        </div>
-
-        <div className="seo-content">
-
-          <h2>
-            {product.title} Supplier in {district || "India"}
-          </h2>
-
-          <p>
-            Human Biomedical LLP is a trusted supplier of <strong>{product.title}</strong> in{" "}
-            {district || "India"}. We offer reliable laboratory and hospital equipment
-            for hospitals, diagnostic centres, pathology laboratories, medical colleges,
-            research institutions, and healthcare organizations with dependable quality
-            and professional support.
-          </p>
-
-          <h2>
-            Why Choose Our {product.title} in {district || "India"}
-          </h2>
-
-          <p>
-            Our <strong>{product.title}</strong> is selected for its reliable
-            performance, quality construction, and suitability for modern healthcare
-            environments. Human Biomedical LLP is committed to providing premium medical
-            equipment backed by competitive pricing, expert guidance, and dependable
-            after-sales support.
-          </p>
-
-          <h2>
-            Trusted {product.title} Dealer in {district || "India"}
-          </h2>
-
-          <p>
-            Human Biomedical LLP is a reliable dealer and supplier of{" "}
-            <strong>{product.title}</strong> in {district || "India"}, serving
-            hospitals, laboratories, clinics, diagnostic centres, research institutes,
-            and healthcare facilities with genuine products and timely delivery.
-          </p>
-
-          <h2>
-            Applications of {product.title}
-          </h2>
-
-          <ul>
-            <li>Hospitals & Healthcare Institutions</li>
-            <li>Diagnostic Centres</li>
+          <h3 className="text-xl font-bold text-slate-800">Applications & Suitability</h3>
+          <ul className="grid md:grid-cols-2 gap-2 text-slate-700 text-sm list-disc pl-5">
+            <li>Hospitals & ICU Diagnostics</li>
             <li>Pathology Laboratories</li>
-            <li>Research Laboratories</li>
-            <li>Medical Colleges & Universities</li>
-            <li>Clinics & Nursing Homes</li>
-            <li>Blood Banks</li>
-            <li>Pharmaceutical & Biotechnology Laboratories</li>
+            <li>Clinical Diagnostic Labs</li>
+            <li>Biotechnology & Research Institutes</li>
+            <li>Blood Banks & Specialized Clinics</li>
           </ul>
 
-          <h2>
-            Frequently Asked Questions
-          </h2>
+          <h3 className="text-xl font-bold text-slate-800">Frequently Asked Questions</h3>
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <div key={index} className="bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                <h4 className="font-bold text-slate-900 mb-1">{faq.question}</h4>
+                <p className="text-sm text-slate-600">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-          <h3>
-            What is {product.title} used for?
-          </h3>
+        {/* Intelligent Internal Linking Engine */}
+        <div className="mt-16 bg-slate-50 p-8 rounded-3xl border border-slate-200/60">
+          {relatedProducts.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Related Laboratory Equipment</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {relatedProducts.map((rp) => (
+                  <Link
+                    key={rp.slug}
+                    href={`/products/${rp.slug}`}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-blue-500 transition text-center"
+                  >
+                    <p className="font-bold text-slate-800 text-sm line-clamp-1">{rp.title}</p>
+                    <p className="text-xs text-blue-600 mt-1">{rp.brand || rp.category}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <p>
-            {product.title} is used in hospitals, laboratories, diagnostic centres,
-            research institutions, and other healthcare facilities depending on its
-            intended medical or laboratory application.
-          </p>
-
-          <h3>
-            Do you provide delivery in {district || "India"}?
-          </h3>
-
-          <p>
-            Yes. Human Biomedical LLP provides safe and timely delivery of{" "}
-            {product.title} across {district || "India"} along with professional
-            customer support.
-          </p>
-
-          <h3>
-            Do you provide technical support?
-          </h3>
-
-          <p>
-            Yes. We offer expert technical guidance and after-sales support for
-            laboratory and hospital equipment to help ensure smooth installation and
-            operation.
-          </p>
-
-          <h3>
-            Can I request a quotation for {product.title}?
-          </h3>
-
-          <p>
-            Absolutely. You can contact Human Biomedical LLP to receive a customized
-            quotation based on your laboratory or hospital requirements.
-          </p>
-
+          {topDistricts.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-3">
+                Service Locations for {product.title}
+              </h3>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {topDistricts.map((d) => (
+                  <Link
+                    key={d.slug}
+                    href={`/${d.slug}/products/${product.slug}`}
+                    className="bg-white px-3 py-1.5 rounded-full border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-500 transition"
+                  >
+                    {product.title} in {d.district}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
