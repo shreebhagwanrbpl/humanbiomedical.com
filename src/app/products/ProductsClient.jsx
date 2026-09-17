@@ -3,27 +3,148 @@
 import "./products.css";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { ChevronRight, ChevronUp, Search, X } from "lucide-react";
+import { ChevronRight, ChevronUp, Search, X, Layers, ShieldCheck, Sparkles, RefreshCw } from "lucide-react";
 
-export default function ProductsClient({ initialProducts, initialCategories, districtData }) {
+export default function ProductsClient({ initialProducts = [], initialCategories = [], districtData }) {
   const location = districtData?.district || "India";
   const district = districtData?.slug;
+
+  const [productsList, setProductsList] = useState(initialProducts);
+  const [categoriesList, setCategoriesList] = useState(initialCategories);
+
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
-  const [openedCategory, setOpenedCategory] = useState(
-    initialCategories.length > 0 ? initialCategories[0].name : ""
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedUsage, setSelectedUsage] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState("");
+
+  // Default opened category and subcategory
+  const [openedCategory, setOpenedCategory] = useState(initialCategories[0]?.name || "");
+  const [openedSubcategory, setOpenedSubcategory] = useState(
+    initialCategories[0]?.subcategories?.[0]?.name || ""
   );
-  const [openedSubCategory, setOpenedSubCategory] = useState({});
   const [showTopButton, setShowTopButton] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    if (!productSearch) return initialProducts;
-    const term = productSearch.toLowerCase();
-    return initialProducts.filter((item) => {
-      const text = `${item.title || ""} ${item.brand || ""} ${item.model || ""} ${item.instrument || ""} ${item.category || ""}`.toLowerCase();
-      return text.includes(term);
+  // Sync state when props change
+  useEffect(() => {
+    if (initialProducts) setProductsList(initialProducts);
+    if (initialCategories) {
+      setCategoriesList(initialCategories);
+      if (!openedCategory && initialCategories.length > 0) {
+        setOpenedCategory(initialCategories[0].name);
+        setOpenedSubcategory(initialCategories[0].subcategories?.[0]?.name || "");
+      }
+    }
+  }, [initialProducts, initialCategories]);
+
+  // LIVE REAL-TIME SYNC: Auto-sync on Tab Focus, Visibility Change, and 3s Polling
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncLiveData = async () => {
+      try {
+        const res = await fetch(`/api/products?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, max-age=0",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data && Array.isArray(data.products) && Array.isArray(data.categories)) {
+            setProductsList(data.products);
+            setCategoriesList(data.categories);
+
+            // Auto-adjust opened category if the currently opened category is removed
+            setOpenedCategory((currCat) => {
+              if (currCat && !data.categories.some((c) => c.name === currCat)) {
+                return data.categories[0]?.name || "";
+              }
+              if (!currCat && data.categories.length > 0) {
+                return data.categories[0]?.name || "";
+              }
+              return currCat;
+            });
+
+            setOpenedSubcategory((currSub) => {
+              const activeCat = data.categories.find((c) => c.name === openedCategory) || data.categories[0];
+              if (currSub && !activeCat?.subcategories?.some((s) => s.name === currSub)) {
+                return activeCat?.subcategories?.[0]?.name || "";
+              }
+              if (!currSub && activeCat?.subcategories?.length > 0) {
+                return activeCat.subcategories[0]?.name || "";
+              }
+              return currSub;
+            });
+          }
+        }
+      } catch (e) {
+        // silent fail
+      }
+    };
+
+    // Instant sync when user switches back from Admin tab to website tab
+    const handleFocus = () => syncLiveData();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncLiveData();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Fast background sync every 3 seconds for immediate UI reaction
+    const timer = setInterval(syncLiveData, 3000);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(timer);
+    };
+  }, [openedCategory]);
+
+  // Extract unique brands & usages
+  const allBrands = useMemo(() => {
+    const brands = new Set();
+    productsList.forEach((p) => {
+      if (p.brand && p.brand.trim()) brands.add(p.brand.trim());
     });
-  }, [initialProducts, productSearch]);
+    return Array.from(brands).sort();
+  }, [productsList]);
+
+  const allUsages = useMemo(() => {
+    const usages = new Set();
+    productsList.forEach((p) => {
+      if (p.usage && p.usage.trim()) usages.add(p.usage.trim());
+      else if (p.automation && p.automation.trim()) usages.add(p.automation.trim());
+      else if (p.instrument && p.instrument.trim()) usages.add(p.instrument.trim());
+    });
+    return Array.from(usages).sort();
+  }, [productsList]);
+
+  const filteredProducts = useMemo(() => {
+    return productsList.filter((item) => {
+      // Search filter
+      if (productSearch) {
+        const term = productSearch.toLowerCase();
+        const text = `${item.title || ""} ${item.brand || ""} ${item.model || ""} ${item.instrument || ""} ${item.category || ""} ${item.subCategory || ""}`.toLowerCase();
+        if (!text.includes(term)) return false;
+      }
+      // Brand filter
+      if (selectedBrand && (item.brand || "").trim().toLowerCase() !== selectedBrand.toLowerCase()) {
+        return false;
+      }
+      // Usage filter
+      if (selectedUsage) {
+        const u = selectedUsage.toLowerCase();
+        const itemU = `${item.usage || ""} ${item.automation || ""} ${item.instrument || ""}`.toLowerCase();
+        if (!itemU.includes(u)) return false;
+      }
+      return true;
+    });
+  }, [productsList, productSearch, selectedBrand, selectedUsage]);
 
   const groupedProducts = useMemo(() => {
     const obj = {};
@@ -47,6 +168,39 @@ export default function ProductsClient({ initialProducts, initialCategories, dis
     return Object.fromEntries(entries);
   }, [groupedProducts]);
 
+  const visibleCategories = useMemo(() => {
+    const result = [];
+    Object.entries(sortedGroupedProducts).forEach(([category, subCategories]) => {
+      if (openedCategory && category !== openedCategory) return;
+
+      const subCategoryEntries = Object.entries(subCategories).filter(
+        ([subCategory]) => !openedSubcategory || subCategory === openedSubcategory
+      );
+
+      // If openedSubcategory had no matches under active search/filters, fallback to all matching subcategories in this category
+      const effectiveSubEntries =
+        subCategoryEntries.length > 0
+          ? subCategoryEntries
+          : productSearch || selectedBrand || selectedUsage
+            ? Object.entries(subCategories)
+            : [];
+
+      const totalCategoryCount = effectiveSubEntries.reduce(
+        (acc, [, prods]) => acc + prods.length,
+        0
+      );
+
+      if (effectiveSubEntries.length > 0 && totalCategoryCount > 0) {
+        result.push({
+          category,
+          subCategoryEntries: effectiveSubEntries,
+          totalCategoryCount,
+        });
+      }
+    });
+    return result;
+  }, [sortedGroupedProducts, openedCategory, openedSubcategory, productSearch, selectedBrand, selectedUsage]);
+
   useEffect(() => {
     const handleScroll = () => setShowTopButton(window.scrollY > 400);
     window.addEventListener("scroll", handleScroll);
@@ -57,241 +211,429 @@ export default function ProductsClient({ initialProducts, initialCategories, dis
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleCategorySelect = (categoryName) => {
+    if (openedCategory === categoryName) {
+      setOpenedCategory("");
+      setOpenedSubcategory("");
+    } else {
+      setOpenedCategory(categoryName);
+      const catObj = categoriesList.find((c) => c.name === categoryName);
+      setOpenedSubcategory(catObj?.subcategories?.[0]?.name || "");
+    }
+    const contentElement = document.querySelector(".products-content");
+    if (contentElement && window.scrollY > 350) {
+      contentElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleSubcategoryToggle = (categoryName, subcategoryName) => {
+    setOpenedCategory(categoryName);
+    if (openedSubcategory === subcategoryName) {
+      setOpenedSubcategory("");
+    } else {
+      setOpenedSubcategory(subcategoryName);
+    }
+  };
+
+  const handleProductScroll = (product) => {
+    setSelectedProduct(product.slug || product.id);
+    const prodId = product.slug || product.title;
+    const el = document.getElementById(prodId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("highlight-pulse");
+      setTimeout(() => el.classList.remove("highlight-pulse"), 2500);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setProductSearch("");
+    setSelectedBrand("");
+    setSelectedUsage("");
+    setSelectedProduct("");
+    setOpenedCategory(categoriesList[0]?.name || "");
+    setOpenedSubcategory(categoriesList[0]?.subcategories?.[0]?.name || "");
+  };
+
   return (
-    <>
-      <section className="products-page">
+    <div className="products-page-wrapper">
+      {/* PRODUCTS HERO BANNER */}
+      <section className="products-hero-section">
         <div className="container-custom">
           <div className="products-heading">
-            <span>Our Products Catalog</span>
-            <h1>Laboratory & Hospital Equipment in {location}</h1>
+            <span>Biomedical &amp; Laboratory Catalog</span>
+            <h1>Diagnostic Equipment &amp; Instruments in {location}</h1>
             <p>
-              Explore our comprehensive catalog of laboratory instruments, diagnostic analyzers, hospital equipment, pathology reagents, and medical supplies. Human Biomedical LLP provides reliable quality, competitive pricing, and pan-India delivery across {location}.
+              Explore our comprehensive range of certified clinical analyzers, diagnostic instruments, and healthcare equipment supplied across {location} with full warranty and nationwide support.
             </p>
           </div>
         </div>
       </section>
 
-      {/* SEARCH SECTION */}
-      <div className="container-custom">
-        <div className="mt-8 relative">
-          <div className="bg-white rounded-[35px] border border-blue-100 shadow-xl p-5">
-            <div className="relative">
-              <input
-                type="text"
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search biomedical products, analyzers, brands..."
-                className="w-full h-16 pl-16 pr-6 rounded-3xl bg-[#f8fbff] border border-blue-100 outline-none focus:border-blue-500 text-lg"
-              />
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl">
-                🔍
-              </span>
-            </div>
-          </div>
+      {/* PRODUCTS MAIN SECTION */}
+      <section className="products-main-section">
+        <div className="container-custom">
+          <div className="products-layout">
+            {/* STICKY NESTED CATEGORIES SIDEBAR */}
+            <aside className="category-sidebar">
+              <div className="category-sidebar-header">
+                <div className="sidebar-header-top">
+                  <h3 className="sidebar-title">Categories</h3>
+                </div>
 
-          {/* SEARCH AUTO-COMPLETE */}
-          {productSearch && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-3xl border border-blue-100 shadow-2xl overflow-hidden z-50">
-              {filteredProducts.length > 0 ? (
-                filteredProducts.slice(0, 5).map((item) => (
-                  <Link
-                    key={item.slug || item.title}
-                    href={
-                      district
-                        ? `/${district}/products/${item.slug}`
-                        : `/products/${item.slug}`
-                    }
-                    className="flex items-center gap-4 p-4 hover:bg-blue-50 transition border-b border-blue-50"
-                  >
-                    <img
-                      src={item.image || item.images?.[0] || "/humanlogo.png"}
-                      alt={item.title}
-                      className="w-14 h-14 rounded-xl object-contain bg-slate-50 p-1"
-                    />
-                    <div className="text-left">
-                      <h4 className="text-base font-bold text-gray-900">{item.title}</h4>
-                      <p className="text-xs text-blue-600 font-semibold">{item.brand || item.category}</p>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="p-6 text-center text-gray-500">No matching products found</div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* PRODUCTS LAYOUT */}
-      <div className="container-custom mt-8">
-        <div className="products-layout">
-          {/* CATEGORIES SIDEBAR */}
-          <aside className="category-sidebar">
-            <div className="category-sidebar-header">
-              <h3 className="text-xl font-bold mb-3 text-slate-800">Categories</h3>
-              <div className="relative mb-4">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  <Search size={16} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Filter Categories..."
-                  value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-8 rounded-xl border border-slate-200 text-xs outline-none focus:border-blue-500"
-                />
-                {categorySearch && (
-                  <button
-                    onClick={() => setCategorySearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
+                <div className="sidebar-search-box">
+                  <input
+                    type="text"
+                    placeholder="Search Product..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="sidebar-search-input"
+                  />
+                  {categorySearch && (
+                    <button
+                      onClick={() => setCategorySearch("")}
+                      className="sidebar-search-clear"
+                      aria-label="Clear filter"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="category-sidebar-body">
-              <div className="sidebar-categories flex flex-col gap-2">
-                {initialCategories
-                  .filter((cat) =>
-                    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
-                  )
+              <div className="category-sidebar-body">
+                {categoriesList
+                  .filter((cat) => {
+                    if (!categorySearch) return true;
+                    const q = categorySearch.toLowerCase();
+                    const matchCat = cat.name.toLowerCase().includes(q);
+                    const matchSub = cat.subcategories?.some((s) => s.name.toLowerCase().includes(q));
+                    const matchProd = cat.subcategories?.some((s) =>
+                      s.products?.some((p) => p.title.toLowerCase().includes(q))
+                    );
+                    return matchCat || matchSub || matchProd;
+                  })
                   .map((cat) => {
                     const isOpen = openedCategory === cat.name;
+                    const hasSubcategories = cat.subcategories && cat.subcategories.length > 0;
+
                     return (
-                      <div
-                        key={cat.slug}
-                        className={`sidebar-category rounded-xl border transition-all ${
-                          isOpen ? "border-blue-500 bg-blue-50/20" : "border-slate-200"
-                        }`}
-                      >
+                      <div key={cat.slug} className="sidebar-cat-group">
+                        {/* CATEGORY ACCORDION HEADER */}
                         <button
-                          className="w-full p-3 flex items-center justify-between text-left"
-                          onClick={() => setOpenedCategory(cat.name)}
+                          type="button"
+                          className={`sidebar-cat-btn ${isOpen ? "is-active" : ""}`}
+                          onClick={() => handleCategorySelect(cat.name)}
                         >
                           <div className="flex items-center gap-2 min-w-0 pr-2">
-                            <ChevronRight
-                              size={16}
-                              className={`transition-transform shrink-0 ${
-                                isOpen ? "rotate-90 text-blue-600" : "text-slate-400"
-                              }`}
-                            />
-                            <span
-                              className={`text-sm truncate font-medium ${
-                                isOpen ? "text-blue-600 font-bold" : "text-slate-700"
-                              }`}
-                            >
+                            <span className="cat-arrow-symbol">
+                              {isOpen ? "∧" : ">"}
+                            </span>
+                            <span className="cat-name-text truncate">
                               {cat.name}
                             </span>
                           </div>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
+                          <span className="cat-count-badge">
                             {cat.count}
                           </span>
                         </button>
+
+                        {/* LEVEL 2: SUBCATEGORIES */}
+                        {isOpen && hasSubcategories && (
+                          <div className="sidebar-subcat-container">
+                            {cat.subcategories.map((sub) => {
+                              const isSubOpen = openedSubcategory === sub.name;
+                              const hasProducts = sub.products && sub.products.length > 0;
+
+                              return (
+                                <div key={sub.id || sub.slug} className="sidebar-subcat-group">
+                                  {/* SUBCATEGORY ACCORDION HEADER */}
+                                  <button
+                                    type="button"
+                                    className={`sidebar-subcat-header-btn ${isSubOpen ? "is-open" : ""}`}
+                                    onClick={() => handleSubcategoryToggle(cat.name, sub.name)}
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                                      <span className="subcat-arrow-symbol">
+                                        {isSubOpen ? "∧" : ">"}
+                                      </span>
+                                      <span className="subcat-title-text truncate">
+                                        {sub.name}
+                                      </span>
+                                    </div>
+                                    <span className="subcat-count-pill">
+                                      {sub.count}
+                                    </span>
+                                  </button>
+
+                                  {/* LEVEL 3: PRODUCT LIST */}
+                                  {isSubOpen && hasProducts && (
+                                    <div className="sidebar-product-list">
+                                      {sub.products
+                                        .filter((p) =>
+                                          !categorySearch ||
+                                          p.title.toLowerCase().includes(categorySearch.toLowerCase())
+                                        )
+                                        .map((prod) => {
+                                          const isSelected = selectedProduct === (prod.slug || prod.id);
+                                          return (
+                                            <button
+                                              key={prod.id || prod.slug}
+                                              type="button"
+                                              className={`sidebar-product-link ${isSelected ? "is-selected" : ""}`}
+                                              onClick={() => handleProductScroll(prod)}
+                                              title={prod.title}
+                                            >
+                                              {prod.title}
+                                            </button>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
               </div>
-            </div>
-          </aside>
+            </aside>
 
-          {/* MAIN CONTENT AREA */}
-          <div className="products-content">
-            {Object.entries(sortedGroupedProducts)
-              .filter(([category]) => !openedCategory || category === openedCategory)
-              .map(([category, subCategories]) => (
-                <section key={category} className="category-section mb-12">
-                  <div className="category-header flex items-center justify-between border-b pb-4 mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900">{category}</h2>
-                    <span className="text-sm font-medium text-slate-500">
-                      {Object.values(subCategories).flat().length} Products
-                    </span>
-                  </div>
+            {/* PRODUCTS CONTENT RIGHT COLUMN */}
+            <main className="products-content">
+              {/* TOP FILTER TOOLBAR */}
+              <div className="products-toolbar">
+                <div className="toolbar-search-wrap">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="toolbar-input"
+                  />
+                </div>
 
-                  <div className="category-body space-y-8">
-                    {Object.entries(subCategories).map(([subCategory, products]) => (
-                      <div key={subCategory} className="subcategory-section">
-                        <h3 className="subcategory-header text-xl font-bold text-blue-600 mb-4">
-                          {subCategory}
-                        </h3>
+                <div className="toolbar-select-wrap">
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="toolbar-select"
+                  >
+                    <option value="">Brand</option>
+                    {allBrands.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                        <div className="grid grid-cols-1 gap-6">
-                          {products.map((product) => (
-                            <div
-                              id={product.slug || product.title}
-                              key={product.slug || product.title}
-                              className="category-product-card bg-white rounded-3xl border shadow-sm p-6 hover:shadow-lg transition"
-                            >
-                              <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-center">
-                                <div className="bg-slate-50 rounded-2xl h-48 flex items-center justify-center p-4">
-                                  {product.image || product.images?.[0] ? (
-                                    <img
-                                      src={product.image || product.images?.[0]}
-                                      alt={product.title}
-                                      className="max-h-36 object-contain"
-                                      loading="lazy"
-                                    />
-                                  ) : (
-                                    <div className="text-3xl">🧪</div>
-                                  )}
-                                </div>
+                <div className="toolbar-select-wrap">
+                  <select
+                    value={selectedUsage}
+                    onChange={(e) => setSelectedUsage(e.target.value)}
+                    className="toolbar-select"
+                  >
+                    <option value="">Usage</option>
+                    {allUsages.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                                <div className="flex flex-col justify-between h-full">
-                                  <div>
-                                    <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                                      {product.title}
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                      {product.brand && (
-                                        <span className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-medium">
-                                          Brand: {product.brand}
-                                        </span>
-                                      )}
-                                      {product.model && (
-                                        <span className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-medium">
-                                          Model: {product.model}
-                                        </span>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="toolbar-reset-btn"
+                >
+                  Reset
+                </button>
+              </div>
+
+              {/* PRODUCTS CATALOG LIST */}
+              {visibleCategories.length > 0 ? (
+                visibleCategories.map(({ category, subCategoryEntries, totalCategoryCount }) => (
+                  <div key={category} className="category-products-wrapper">
+                    {/* CATEGORY HEADER MATCHING SCREENSHOT */}
+                    <div className="category-header-banner">
+                      <h2 className="category-banner-title">{category}</h2>
+                      <span className="category-banner-badge">
+                        {totalCategoryCount}Products
+                      </span>
+                    </div>
+
+                    {/* SUBCATEGORIES & PRODUCTS */}
+                    <div className="category-body">
+                      {subCategoryEntries.map(([subCategory, products]) => {
+                        const subId = (subCategory || "")
+                          .toLowerCase()
+                          .trim()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^\w\-]+/g, "");
+                        return (
+                          <div key={subCategory} id={subId} className="subcategory-section">
+                            <div className="subcategory-products-list">
+                              {products.map((product) => (
+                                <div
+                                  id={product.slug || product.title}
+                                  key={product.slug || product.title}
+                                  className="category-product-card"
+                                >
+                                  <div className="product-card-grid">
+                                    {/* PRODUCT IMAGE */}
+                                    <div className="product-card-img-wrapper">
+                                      {product.image || product.images?.[0] ? (
+                                        <img
+                                          src={product.image || product.images?.[0]}
+                                          alt={product.title}
+                                          loading="lazy"
+                                        />
+                                      ) : (
+                                        <div className="no-img-placeholder">🔬</div>
                                       )}
                                     </div>
-                                    <p className="text-sm text-slate-600 line-clamp-2 mb-4">
-                                      {product.desc ||
-                                        `${product.title} supplied by Human Biomedical LLP. High precision equipment for diagnostic and research labs in ${location}.`}
-                                    </p>
-                                  </div>
 
-                                  <Link
-                                    href={
-                                      district
-                                        ? `/${district}/products/${product.slug}`
-                                        : `/products/${product.slug}`
-                                    }
-                                    className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-2xl transition w-fit"
-                                  >
-                                    View Specifications & Pricing →
-                                  </Link>
+                                    {/* PRODUCT DETAILS */}
+                                    <div className="product-card-info">
+                                      <h3 className="product-card-title">
+                                        {product.title}
+                                      </h3>
+
+                                      {/* 2X2 SPECIFICATIONS GRID */}
+                                      <div className="product-specs-2x2">
+                                        <div className="spec-box">
+                                          <span className="spec-label">Brand</span>
+                                          <span className="spec-val">{product.brand || "-"}</span>
+                                        </div>
+                                        <div className="spec-box">
+                                          <span className="spec-label">Usage</span>
+                                          <span className="spec-val">
+                                            {product.usage || product.automation || "-"}
+                                          </span>
+                                        </div>
+                                        <div className="spec-box">
+                                          <span className="spec-label">Model</span>
+                                          <span className="spec-val">{product.model || "-"}</span>
+                                        </div>
+                                        <div className="spec-box">
+                                          <span className="spec-label">Availability</span>
+                                          <span className="spec-val">
+                                            {product.availability || "In Stock"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* ACTION BUTTON */}
+                                    <div className="product-card-action">
+                                      <Link
+                                        href={
+                                          district
+                                            ? `/${district}/products/${product.slug}`
+                                            : `/products/${product.slug}`
+                                        }
+                                        className="product-view-btn"
+                                      >
+                                        View Details
+                                      </Link>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </section>
-              ))}
+                ))
+              ) : (
+                /* INSPIRING BIOMEDICAL SLOGAN & SOURCING CARD */
+                <div className="procurement-slogan-card">
+                  <div className="slogan-badge">
+                    <Sparkles size={14} className="text-blue-600" />
+                    <span>Precision Diagnostics • Engineering Excellence • Pan-India Biomedical Support</span>
+                  </div>
+
+                  <h3 className="slogan-title">
+                    Advancing Healthcare with Next-Generation Biomedical Solutions
+                  </h3>
+
+                  <p className="slogan-desc">
+                    Equipping hospitals, pathology laboratories, and diagnostic centers across <strong>{location}</strong> with certified analyzers, precision reagents, and uncompromised technical reliability.
+                  </p>
+
+                  <div className="slogan-highlight-box">
+                    <p className="slogan-highlight-text">
+                      <strong>Looking for a specific diagnostic analyzer, test parameter, or bulk reagents?</strong><br />
+                      Even if a particular model is not currently listed under your active filter, our biomedical engineers and procurement specialists will source, calibrate, and install it directly for your facility.
+                    </p>
+                  </div>
+
+                  <div className="slogan-actions">
+                    <Link
+                      href={district ? `/${district}/contact` : `/contact`}
+                      className="slogan-inquiry-btn"
+                    >
+                      <span>Request Custom Equipment Quotation</span>
+                      <ChevronRight size={16} />
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="slogan-reset-btn"
+                    >
+                      <RefreshCw size={15} />
+                      <span>Explore Full Equipment Catalog</span>
+                    </button>
+                  </div>
+
+                  {/* TRUST PILLARS MICRO-GRID */}
+                  <div className="slogan-trust-grid">
+                    <div className="trust-pillar-item">
+                      <ShieldCheck size={18} className="text-blue-600 flex-shrink-0" />
+                      <div>
+                        <h4>100% Certified &amp; Calibrated</h4>
+                        <p>ISO, CE &amp; NABL standard compliant diagnostic instruments</p>
+                      </div>
+                    </div>
+                    <div className="trust-pillar-item">
+                      <Sparkles size={18} className="text-blue-600 flex-shrink-0" />
+                      <div>
+                        <h4>Direct Technical Sourcing</h4>
+                        <p>Global biomedical brands &amp; fast doorstep dispatch</p>
+                      </div>
+                    </div>
+                    <div className="trust-pillar-item">
+                      <Layers size={18} className="text-blue-600 flex-shrink-0" />
+                      <div>
+                        <h4>Biomedical Engineers Support</h4>
+                        <p>On-site installation, training &amp; 24/7 AMC warranty across {location}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </main>
           </div>
         </div>
-      </div>
+      </section>
 
+      {/* BACK TO TOP BUTTON */}
       {showTopButton && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-[999] w-12 h-12 rounded-full bg-blue-600 text-white shadow-xl flex items-center justify-center hover:bg-blue-700 transition"
+          className="back-to-top-btn"
+          aria-label="Back to top"
         >
-          <ChevronUp size={24} />
+          <ChevronUp size={22} />
         </button>
       )}
-    </>
+    </div>
   );
 }

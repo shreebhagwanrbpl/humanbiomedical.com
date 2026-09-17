@@ -14,19 +14,21 @@ export async function generateMetadata({ params }) {
   const categories = await getAllCategories();
   const cat = categories.find((c) => c.slug === slug);
 
-  if (!cat) {
-    return { title: "Category Not Found" };
-  }
+  const formattedName = decodeURIComponent(slug)
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
-  const url = `https://humanbiomedical.com/category/${cat.slug}`;
+  const catName = cat ? cat.name : formattedName;
+  const url = `https://humanbiomedical.com/category/${slug}`;
 
   return {
-    title: `${cat.name} Supplier & Dealer | Laboratory & Hospital Equipment`,
-    description: `Explore high-quality ${cat.name} from Human Biomedical LLP. Complete range of diagnostic instruments, analyzers, and medical devices supplied across India.`,
+    title: `${catName} Supplier & Dealer | Laboratory & Hospital Equipment`,
+    description: `Explore high-quality ${catName} from Human Biomedical LLP. Complete range of diagnostic instruments, analyzers, and medical devices supplied across India.`,
     alternates: { canonical: url },
     openGraph: {
-      title: `${cat.name} | Human Biomedical LLP`,
-      description: `Premium ${cat.name} supplied to hospitals, pathology labs, and diagnostic centres.`,
+      title: `${catName} | Human Biomedical LLP`,
+      description: `Premium ${catName} supplied to hospitals, pathology labs, and diagnostic centres.`,
       url,
       siteName: "Human Biomedical LLP",
       type: "website",
@@ -37,11 +39,18 @@ export async function generateMetadata({ params }) {
 export default async function CategoryHubPage({ params }) {
   const { slug } = await params;
   const categories = await getAllCategories();
-  const cat = categories.find((c) => c.slug === slug);
+  const rawCat = categories.find((c) => c.slug === slug);
 
-  if (!cat) {
-    notFound();
-  }
+  const formattedName = decodeURIComponent(slug)
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  const cat = rawCat || {
+    name: formattedName,
+    slug: slug,
+    products: [],
+  };
 
   const breadcrumbs = [
     { name: "Home", url: "/" },
@@ -77,43 +86,69 @@ export default async function CategoryHubPage({ params }) {
           </p>
         </div>
 
-        {/* Category Products Grid */}
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {cat.products.map((product) => (
-            <div
-              key={product.slug || product.title}
-              className="bg-white rounded-3xl border border-slate-100 p-6 shadow-md hover:shadow-xl transition flex flex-col justify-between"
-            >
-              <div>
-                <div className="bg-slate-50 rounded-2xl h-48 flex items-center justify-center p-4 mb-4">
-                  {product.image || product.images?.[0] ? (
-                    <img
-                      src={product.image || product.images?.[0]}
-                      alt={product.title}
-                      className="max-h-40 object-contain"
-                    />
-                  ) : (
-                    <div className="text-4xl">🧪</div>
-                  )}
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  {product.brand || cat.name}
-                </span>
-                <h3 className="text-xl font-bold text-slate-900 mt-3 mb-2">{product.title}</h3>
-                <p className="text-sm text-slate-600 line-clamp-3 mb-4">
-                  {product.desc || `${product.title} high-precision equipment for diagnostic and laboratory applications.`}
-                </p>
-              </div>
-
-              <Link
-                href={`/products/${product.slug || slugify(product.title)}`}
-                className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-2xl transition"
+        {/* Category Products Grid or Custom Inquiry Banner */}
+        {cat.products.length > 0 ? (
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {cat.products.map((product) => (
+              <div
+                key={product.slug || product.title}
+                className="bg-white rounded-3xl border border-slate-100 p-6 shadow-md hover:shadow-xl transition flex flex-col justify-between"
               >
-                View Full Specifications
+                <div>
+                  <div className="bg-slate-50 rounded-2xl h-48 flex items-center justify-center p-4 mb-4">
+                    {product.image || product.images?.[0] ? (
+                      <img
+                        src={product.image || product.images?.[0]}
+                        alt={product.title}
+                        className="max-h-40 object-contain"
+                      />
+                    ) : (
+                      <div className="text-4xl">🧪</div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                    {product.brand || cat.name}
+                  </span>
+                  <h3 className="text-xl font-bold text-slate-900 mt-3 mb-2">{product.title}</h3>
+                  <p className="text-sm text-slate-600 line-clamp-3 mb-4">
+                    {product.desc || `${product.title} high-precision equipment for diagnostic and laboratory applications.`}
+                  </p>
+                </div>
+
+                <Link
+                  href={`/products/${product.slug || slugify(product.title)}`}
+                  className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-2xl transition"
+                >
+                  View Full Specifications
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm text-center">
+            <div className="text-5xl mb-3">🔬</div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">
+              {cat.name} Portfolio &amp; Direct Quotations
+            </h3>
+            <p className="text-slate-600 max-w-2xl mx-auto mb-6">
+              Our <strong>{cat.name}</strong> equipment catalog is updated in real-time. For custom procurement, bulk orders, or specific model specifications, please request a fast quotation or explore all active products.
+            </p>
+            <div className="flex justify-center gap-4 flex-wrap">
+              <Link
+                href="/products"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-2xl transition"
+              >
+                Browse All Products
+              </Link>
+              <Link
+                href="/contact"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-6 py-3 rounded-2xl transition"
+              >
+                Contact Sales Team
               </Link>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
         {/* Category Information & Buying Guide */}
         <div className="mt-16 bg-slate-50 rounded-3xl p-8 border border-slate-200/60">

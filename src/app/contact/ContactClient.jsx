@@ -1,15 +1,20 @@
 "use client";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import "./contact.css";
-import { Toaster } from "react-hot-toast";
+
+const DEFAULT_CONTACT_INFO = [
+    { label: "Address", value: "Unit S-1, 2nd Floor, Pn 16, D Block, Tagore Nagar, Vaishali Nagar, Jaipur, Rajasthan 302021" },
+    { label: "Phone", value: "+91 98290 12345" },
+    { label: "Email", value: "info@humanbiomedical.com" },
+];
+
 export default function ContactClient({
     districtData,
 }) {
-    const [contactInfo, setContactInfo] = useState([]);
+    const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT_INFO);
 
     const districtName =
         districtData?.district || "India";
@@ -114,23 +119,21 @@ export default function ContactClient({
     useEffect(() => {
         const loadContact = async () => {
             try {
-                const snap = await getDoc(
-                    doc(
-                        db,
-                        "websites",
-                        "humanbiomedicalcom",
-                        "pages",
-                        "contact"
-                    )
-                );
-
-                if (snap.exists()) {
-                    setContactInfo(
-                        snap.data().contactInfo || []
-                    );
+                const BASE_URL = "https://firestore.googleapis.com/v1/projects/rajbiosis-central/databases/(default)/documents";
+                const res = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/contact`);
+                if (res.ok) {
+                    const contactData = await res.json();
+                    const rawItems = contactData.fields?.contactInfo?.arrayValue?.values || [];
+                    const parsed = rawItems.map((item) => ({
+                        label: item.mapValue?.fields?.label?.stringValue || "",
+                        value: item.mapValue?.fields?.value?.stringValue || "",
+                    }));
+                    if (parsed.length > 0) {
+                        setContactInfo(parsed);
+                    }
                 }
             } catch (err) {
-                console.log(err);
+                // Silently keep DEFAULT_CONTACT_INFO
             }
         };
 

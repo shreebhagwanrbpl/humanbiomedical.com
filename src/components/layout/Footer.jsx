@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import {
   FaFacebookF,
   FaInstagram,
@@ -13,15 +11,17 @@ import {
 } from "react-icons/fa";
 import "./footer.css";
 
+const DEFAULT_CONTACT_INFO = [
+  { label: "Address", value: "Unit S-1, 2nd Floor, Pn 16, D Block, Tagore Nagar, Vaishali Nagar, Jaipur, Rajasthan 302021" },
+  { label: "Phone", value: "+91 98290 12345" },
+  { label: "Email", value: "info@humanbiomedical.com" },
+];
+
 export default function Footer({
   districtData,
 }) {
-  const [contactInfo, setContactInfo] =
-    useState([]);
-
-  const [stateName, setStateName] =
-    useState("");
-
+  const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT_INFO);
+  const [stateName, setStateName] = useState("");
   const params = useParams();
 
   const district =
@@ -59,48 +59,35 @@ export default function Footer({
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Contact Info
-        const contactSnap = await getDoc(
-          doc(
-            db,
-            "websites",
-            "humanbiomedicalcom",
-            "pages",
-            "contact"
-          )
-        );
+        const BASE_URL = "https://firestore.googleapis.com/v1/projects/rajbiosis-central/databases/(default)/documents";
 
-        if (contactSnap.exists()) {
-          setContactInfo(
-            contactSnap.data()
-              .contactInfo || []
-          );
+        // Fetch contact info
+        const contactRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/contact`);
+        if (contactRes.ok) {
+          const contactData = await contactRes.json();
+          const rawItems = contactData.fields?.contactInfo?.arrayValue?.values || [];
+          const parsed = rawItems.map((item) => ({
+            label: item.mapValue?.fields?.label?.stringValue || "",
+            value: item.mapValue?.fields?.value?.stringValue || "",
+          }));
+          if (parsed.length > 0) {
+            setContactInfo(parsed);
+          }
         }
 
         // District State
         if (district) {
-          const districtSnap =
-            await getDoc(
-              doc(
-                db,
-                "websites",
-                "humanbiomedicalcom",
-                "districts",
-                district
-              )
-            );
-
-          if (
-            districtSnap.exists()
-          ) {
-            setStateName(
-              districtSnap.data()
-                ?.state || ""
-            );
+          const distRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/districts/${encodeURIComponent(district.toLowerCase())}`);
+          if (distRes.ok) {
+            const distData = await distRes.json();
+            const state = distData.fields?.state?.stringValue;
+            if (state) {
+              setStateName(state);
+            }
           }
         }
       } catch (err) {
-        console.log(err);
+        // Silently fall back to DEFAULT_CONTACT_INFO
       }
     };
 

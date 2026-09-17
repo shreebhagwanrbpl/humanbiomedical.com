@@ -2,6 +2,10 @@ import { getAllProducts, getAllCategories } from "@/lib/data/products";
 import { generateBreadcrumbSchema } from "@/lib/seo/schema";
 import ProductsClient from "./ProductsClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 export const metadata = {
   title: "Laboratory & Biomedical Equipment Products Catalog | Human Biomedical LLP",
   description:

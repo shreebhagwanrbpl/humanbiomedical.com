@@ -1,12 +1,13 @@
 /* =========================
-ABOUT HERO
+ABOUT HERO / SEO ABOUT
 ========================= */
 
-.about-hero {
-  padding: 30px 0;
+.about-hero,
+.seo-about {
+  padding: 130px 0 70px;
   background:
     radial-gradient(circle at top right,
-      rgba(15, 108, 189, .12),
+      rgba(15, 108, 189, .10),
       transparent 30%),
     linear-gradient(to bottom,
       #f5faff,
@@ -14,30 +15,47 @@ ABOUT HERO
   text-align: center;
 }
 
+.seo-about h2 {
+  font-size: 44px;
+  line-height: 1.2;
+  font-weight: 800;
+  max-width: 900px;
+  margin: 0 auto 18px;
+  color: #0f172a;
+}
+
+.seo-about p {
+  max-width: 860px;
+  margin: 0 auto;
+  color: #64748b;
+  font-size: 16.5px;
+  line-height: 1.8;
+}
+
 .page-tag {
   display: inline-block;
   background: #eaf5ff;
   color: #0f6cbd;
-  padding: 12px 22px;
+  padding: 8px 20px;
   border-radius: 999px;
   font-weight: 600;
-  margin-bottom: 20px;
-  margin-top: 50px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
 }
 
 .about-hero h1 {
-  font-size: 68px;
-  line-height: 1.1;
+  font-size: 56px;
+  line-height: 1.15;
   max-width: 1070px;
   margin: auto;
 }
 
 .about-hero p {
   max-width: 800px;
-  margin: 25px auto 0;
-  color: #6b7280;
-  font-size: 19px;
-  line-height: 1.9;
+  margin: 20px auto 0;
+  color: #64748b;
+  font-size: 17px;
+  line-height: 1.8;
 }
 
 /* =========================
@@ -45,7 +63,7 @@ COMPANY SECTION
 ========================= */
 
 .company-section {
-  padding: 120px 0;
+  padding: 70px 0;
 }
 
 .company-grid {
@@ -151,35 +169,6 @@ MISSION & VISION
 .mission-card p {
   color: #6b7280;
   line-height: 1.9;
-}
-
-.seo-about {
-  padding: 60px 0;
-  background: #f8fafc;
-  text-align: center;
-}
-
-.seo-about .container-custom {
-  max-width: 1200px;
-  margin: auto;
-  padding: 0 20px;
-}
-
-.seo-about h2 {
-  font-size: 36px;
-  font-weight: 700;
-  text-align: center;
-  color: #111827;
-  margin-bottom: 20px;
-}
-
-.seo-about p {
-  max-width: 900px;
-  margin: auto;
-  text-align: center;
-  font-size: 18px;
-  line-height: 1.9;
-  color: #6b7280;
 }
 
 /* =========================
@@ -392,6 +381,11 @@ MOBILE
 ========================= */
 
 @media (max-width: 768px) {
+
+  .about-hero,
+  .seo-about {
+    padding: 110px 0 50px;
+  }
 
   .about-hero h1 {
     font-size: 34px;

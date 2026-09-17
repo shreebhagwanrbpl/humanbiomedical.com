@@ -1,6 +1,5 @@
 import "./services.css";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getServicesPageData } from "@/lib/data/pages";
 import Link from "next/link";
 export const metadata = {
   title:
@@ -56,13 +55,8 @@ export default async function Services({
   const districtName =
     districtData?.district ||
     "India";
-  const snap = await getDoc(
-    doc(db, "websites", "humanbiomedicalcom", "pages", "services")
-  );
-
-  const firebaseServices = snap.exists()
-    ? snap.data().services || []
-    : [];
+  const pageData = await getServicesPageData();
+  const firebaseServices = pageData.services || [];
 
   const icons = [
     "🧪",

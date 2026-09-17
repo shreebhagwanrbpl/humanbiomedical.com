@@ -1,6 +1,5 @@
 import "./home.css";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getHomePageData } from "@/lib/data/pages";
 import Link from "next/link";
 import Homeimg from "./img/Homeimg.jpg";
 import heroimg from "./img/heroimg.jpg";
@@ -72,9 +71,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function Home({ districtData }) {
-  const docRef = doc(db, "websites", "humanbiomedicalcom", "pages", "home");
-  const snap = await getDoc(docRef);
-  const savedData = snap.exists() ? snap.data() : {};
+  const savedData = await getHomePageData();
   const location = districtData?.district || "India";
 
   const schemaData = {

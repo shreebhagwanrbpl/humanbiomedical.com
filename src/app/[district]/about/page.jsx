@@ -1,70 +1,30 @@
-import { db } from "@/lib/firebase";
-
 import AboutPage from "@/app/about/page";
+import { getDistrictBySlug } from "@/lib/data/districts";
+import { notFound } from "next/navigation";
 
-import {
-    doc,
-    getDoc,
-} from "firebase/firestore";
-
-import {
-    notFound,
-} from "next/navigation";
-
-export async function generateMetadata({
-    params,
-}) {
+export async function generateMetadata({ params }) {
     const { district } = await params;
+    const districtData = await getDistrictBySlug(district);
 
-    const docRef = doc(
-        db,
-        "websites",
-        "humanbiomedicalcom",
-        "districts",
-        district
-    );
-
-    const snap = await getDoc(docRef);
-
-    if (!snap.exists()) {
+    if (!districtData) {
         return {
             title: "District Not Found",
         };
     }
 
-    const districtData = snap.data();
-
     return {
         title: `Laboratory & Hospital Equipment Supplier in ${districtData.district} | Human Biomedical LLP`,
-
         description: `Human Biomedical LLP supplies laboratory instruments, hospital equipment, diagnostic systems, pathology analyzers, medical devices, laboratory consumables, and healthcare solutions in ${districtData.district}, ${districtData.state}.`,
     };
 }
 
-export default async function About({
-    params,
-}) {
+export default async function About({ params }) {
     const { district } = await params;
+    const districtData = await getDistrictBySlug(district);
 
-    const docRef = doc(
-        db,
-        "websites",
-        "humanbiomedicalcom",
-        "districts",
-        district
-    );
-
-    const snap = await getDoc(docRef);
-
-    if (!snap.exists()) {
+    if (!districtData) {
         return notFound();
     }
 
-    const districtData = snap.data();
-
-    return (
-        <AboutPage
-            districtData={districtData}
-        />
-    );
+    return <AboutPage districtData={districtData} />;
 }
