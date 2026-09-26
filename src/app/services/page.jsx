@@ -1,6 +1,10 @@
 import "./services.css";
 import { getServicesPageData } from "@/lib/data/pages";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 export const metadata = {
   title:
     "Laboratory & Hospital Equipment Services in India | Human Biomedical LLP",
@@ -56,7 +60,7 @@ export default async function Services({
     districtData?.district ||
     "India";
   const pageData = await getServicesPageData();
-  const firebaseServices = pageData.services || [];
+  const servicesList = pageData.services || [];
 
   const icons = [
     "🧪",
@@ -104,7 +108,7 @@ export default async function Services({
           </div>
 
           <div className="services-grid">
-            {firebaseServices.slice(0, 6).map((item, index) => (
+            {servicesList.slice(0, 6).map((item, index) => (
               <div className="service-card" key={index}>
                 <div className="service-icon">
                   {icons[index] || "🏥"}

@@ -1,20 +1,12 @@
 "use client";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import toast, { Toaster } from "react-hot-toast";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
 import "./contact.css";
-
-const DEFAULT_CONTACT_INFO = [
-    { label: "Address", value: "Unit S-1, 2nd Floor, Pn 16, D Block, Tagore Nagar, Vaishali Nagar, Jaipur, Rajasthan 302021" },
-    { label: "Phone", value: "+91 98290 12345" },
-    { label: "Email", value: "info@humanbiomedical.com" },
-];
 
 export default function ContactClient({
     districtData,
 }) {
-    const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT_INFO);
+    const [contactInfo, setContactInfo] = useState([]);
 
     const districtName =
         districtData?.district || "India";
@@ -41,6 +33,7 @@ export default function ContactClient({
                 ? `${formattedDistrict}, ${stateName}, India`
                 : `${formattedDistrict}, India`
             : "Jaipur, Rajasthan, India";
+
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -48,6 +41,7 @@ export default function ContactClient({
         company: "",
         message: "",
     });
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -82,58 +76,61 @@ export default function ContactClient({
             toast.error("Message must be at least 10 characters");
             return;
         }
+
         try {
-            await addDoc(
-                collection(
-                    db,
-                    "websitesQueries",
-                    "humanbiomedicalcom",
-                    "contactQueries"
-                ),
-                {
+            const res = await fetch("/api/contact-query", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
                     phone: formData.phone,
                     company: formData.company,
                     message: formData.message,
                     district: districtName,
-                    createdAt: serverTimestamp(),
-                }
-            );
-
-            toast.success("Message sent successfully");
-
-            setFormData({
-                name: "",
-                email: "",
-                phone: "",
-                company: "",
-                message: "",
+                    websiteId: "humanbiomedicalcom",
+                    companyId: "human",
+                    source: "contact_page",
+                }),
             });
 
+            if (res.ok) {
+                toast.success("Message sent successfully");
+                setFormData({
+                    name: "",
+                    email: "",
+                    phone: "",
+                    company: "",
+                    message: "",
+                });
+            } else {
+                toast.error("Failed to send message");
+            }
         } catch (error) {
-            console.log(error);
+            console.error("Contact query submission error:", error);
             toast.error("Failed to send message");
         }
     };
+
     useEffect(() => {
         const loadContact = async () => {
             try {
-                const BASE_URL = "https://firestore.googleapis.com/v1/projects/rajbiosis-central/databases/(default)/documents";
-                const res = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/contact`);
+                const res = await fetch(
+                    `/api/site-data?type=contact&companyId=human&websiteId=humanbiomedicalcom&t=${Date.now()}`
+                );
                 if (res.ok) {
-                    const contactData = await res.json();
-                    const rawItems = contactData.fields?.contactInfo?.arrayValue?.values || [];
-                    const parsed = rawItems.map((item) => ({
-                        label: item.mapValue?.fields?.label?.stringValue || "",
-                        value: item.mapValue?.fields?.value?.stringValue || "",
-                    }));
-                    if (parsed.length > 0) {
-                        setContactInfo(parsed);
+                    const json = await res.json();
+                    const data = json.data;
+                    if (data && Array.isArray(data.contactInfo)) {
+                        setContactInfo(data.contactInfo);
+                    } else if (Array.isArray(data)) {
+                        setContactInfo(data);
                     }
                 }
             } catch (err) {
-                // Silently keep DEFAULT_CONTACT_INFO
+                // Silently handle
             }
         };
 

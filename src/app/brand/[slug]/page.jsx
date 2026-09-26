@@ -4,6 +4,10 @@ import { getAllBrands, slugify } from "@/lib/data/products";
 import { generateBreadcrumbSchema } from "@/lib/seo/schema";
 import "@/app/products/products.css";
 
+export const dynamicParams = true;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const brands = await getAllBrands();
   return brands.map((b) => ({ slug: b.slug }));

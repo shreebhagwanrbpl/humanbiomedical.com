@@ -1,5 +1,8 @@
-const PROJECT_ID = "rajbiosis-central";
-const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+import {
+  fetchAdminCatalog,
+  fetchAdminSiteData,
+  normalizeWebsiteId,
+} from "@/lib/admin-api";
 
 const TARGET_WEBSITES = [
   "humanbiomedicalcom",
@@ -10,36 +13,13 @@ const TARGET_WEBSITES = [
 ];
 
 export function isWebsiteMatch(websiteIds) {
-  if (!websiteIds) return false;
+  if (!websiteIds) return true;
   const list = Array.isArray(websiteIds) ? websiteIds : [websiteIds];
-  if (list.length === 0) return true; // Default to visible if unassigned
-  return list.some((w) => TARGET_WEBSITES.includes(String(w).toLowerCase().trim()));
-}
-
-export function parseFirestoreFields(fields) {
-  const obj = {};
-  if (!fields) return obj;
-  for (const [key, value] of Object.entries(fields)) {
-    if ("stringValue" in value) {
-      obj[key] = value.stringValue;
-    } else if ("booleanValue" in value) {
-      obj[key] = value.booleanValue;
-    } else if ("integerValue" in value) {
-      obj[key] = parseInt(value.integerValue, 10);
-    } else if ("doubleValue" in value) {
-      obj[key] = parseFloat(value.doubleValue);
-    } else if ("arrayValue" in value) {
-      const values = value.arrayValue.values || [];
-      obj[key] = values.map((val) => {
-        if ("stringValue" in val) return val.stringValue;
-        if ("mapValue" in val) return parseFirestoreFields(val.mapValue.fields);
-        return val;
-      });
-    } else if ("mapValue" in value) {
-      obj[key] = parseFirestoreFields(value.mapValue.fields);
-    }
-  }
-  return obj;
+  if (list.length === 0) return true;
+  return list.some((w) => {
+    const norm = normalizeWebsiteId(String(w));
+    return TARGET_WEBSITES.includes(norm) || norm.includes("human");
+  });
 }
 
 export function slugify(text) {
@@ -53,54 +33,59 @@ export function slugify(text) {
     .replace(/\-\-+/g, "-");
 }
 
-export async function fetchRestJson(url) {
-  try {
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
-        "Pragma": "no-cache",
-      },
-    });
-    if (res.status === 200) {
-      return await res.json();
-    }
-    return null;
-  } catch (err) {
-    console.error(`Fetch error for ${url}:`, err.message);
-    return null;
-  }
-}
-
 export function normalizeProduct(p, parentCat = {}, parentSub = {}) {
-  const catName = (parentCat.name || parentCat.category || p.category || "General Medical Equipment").trim();
+  if (!p) return null;
+
+  const catName = (
+    parentCat.name ||
+    parentCat.category ||
+    p.category ||
+    p.categoryName ||
+    ""
+  ).trim();
   const catId = parentCat.id || p.categoryId || slugify(catName);
-  const subName = (parentSub.name || parentSub.subCategory || p.subCategory || p.subcategory || "General").trim();
+
+  const subName = (
+    parentSub.name ||
+    parentSub.subCategory ||
+    p.subCategory ||
+    p.subcategory ||
+    p.subCategoryName ||
+    ""
+  ).trim();
   const subId = parentSub.id || p.subcategoryId || slugify(subName);
 
-  const title = (p.title || p.name || "").trim() || "Untitled Product";
+  const title = (p.title || p.name || "").trim();
   const slug = (p.slug || slugify(title)).trim();
 
   let images = [];
   if (Array.isArray(p.images) && p.images.length > 0) {
-    images = p.images.filter((img) => typeof img === "string" && img.trim() !== "");
+    images = p.images.filter(
+      (img) => typeof img === "string" && img.trim() !== ""
+    );
   } else if (p.image && typeof p.image === "string" && p.image.trim() !== "") {
     images = [p.image.trim()];
-  } else if (Array.isArray(p.originalImages) && p.originalImages.length > 0) {
-    images = p.originalImages.filter((img) => typeof img === "string" && img.trim() !== "");
+  } else if (
+    Array.isArray(p.originalImages) &&
+    p.originalImages.length > 0
+  ) {
+    images = p.originalImages.filter(
+      (img) => typeof img === "string" && img.trim() !== ""
+    );
   }
 
-  const siteIds = Array.isArray(p.websiteIds) && p.websiteIds.length > 0
-    ? p.websiteIds
-    : Array.isArray(parentSub.websiteIds) && parentSub.websiteIds.length > 0
-    ? parentSub.websiteIds
-    : Array.isArray(parentCat.websiteIds) && parentCat.websiteIds.length > 0
-    ? parentCat.websiteIds
-    : [];
+  const siteIds =
+    Array.isArray(p.websiteIds) && p.websiteIds.length > 0
+      ? p.websiteIds
+      : Array.isArray(parentSub.websiteIds) && parentSub.websiteIds.length > 0
+      ? parentSub.websiteIds
+      : Array.isArray(parentCat.websiteIds) && parentCat.websiteIds.length > 0
+      ? parentCat.websiteIds
+      : [];
 
   return {
-    id: p.id || p.productId || p.categoryProductId || slug,
-    productId: p.productId || p.categoryProductId || p.id || slug,
+    id: String(p.id || p.productId || p.categoryProductId || slug),
+    productId: String(p.productId || p.categoryProductId || p.id || slug),
     categoryProductId: p.categoryProductId || "",
     title,
     name: title,
@@ -129,170 +114,76 @@ export function normalizeProduct(p, parentCat = {}, parentSub = {}) {
     websiteIds: siteIds,
     isPublished: p.isPublished !== false,
     status: p.status || "active",
-    type: p.type || "category",
+    type: p.type || "product",
   };
 }
 
+/**
+ * Fetch all products from SQLite Admin API
+ */
 export async function getAllProducts() {
   try {
-    // 1. Fetch Master Categories from companies/human/categories
-    const catData = await fetchRestJson(`${BASE_URL}/companies/human/categories?pageSize=300`);
-    const catDocs = catData?.documents || [];
-
-    const categoryProductPromises = catDocs.map(async (cDoc) => {
-      const catId = cDoc.name.split("/").pop();
-      const catFields = parseFirestoreFields(cDoc.fields);
-      const cSites = Array.isArray(catFields.websiteIds)
-        ? catFields.websiteIds
-        : catFields.websiteIds
-        ? [catFields.websiteIds]
-        : [];
-
-      const isCatVisible = cSites.length === 0 || isWebsiteMatch(cSites);
-      if (!isCatVisible || catFields.status === "inactive") return [];
-
-      const catObj = {
-        id: catId,
-        name: (catFields.name || catFields.category || catId).trim(),
-        slug: catFields.slug || slugify(catFields.name || catFields.category || catId),
-        websiteIds: cSites,
-      };
-
-      // Fetch subcategories for this category
-      const subData = await fetchRestJson(
-        `${BASE_URL}/companies/human/categories/${catId}/subcategories?pageSize=300`
-      );
-      const subDocs = subData?.documents || [];
-
-      const subcategoryProducts = [];
-      subDocs.forEach((sDoc) => {
-        const subId = sDoc.name.split("/").pop();
-        const subFields = parseFirestoreFields(sDoc.fields);
-        const sSites = Array.isArray(subFields.websiteIds)
-          ? subFields.websiteIds
-          : subFields.websiteIds
-          ? [subFields.websiteIds]
-          : cSites;
-
-        const isSubVisible = sSites.length === 0 || isWebsiteMatch(sSites);
-        if (!isSubVisible || subFields.status === "inactive") return;
-
-        const subObj = {
-          id: subId,
-          name: (subFields.name || subFields.subCategory || subId).trim(),
-          slug: subFields.slug || slugify(subFields.name || subFields.subCategory || subId),
-          websiteIds: sSites,
-        };
-
-        const rawProducts = subFields.products || [];
-        rawProducts.forEach((p) => {
-          if (p.isPublished === false || p.status === "inactive") return;
-          const pSites = Array.isArray(p.websiteIds) && p.websiteIds.length > 0 ? p.websiteIds : sSites;
-          if (!isWebsiteMatch(pSites)) return;
-
-          subcategoryProducts.push(normalizeProduct(p, catObj, subObj));
-        });
-      });
-
-      return subcategoryProducts;
+    const rawCatalog = await fetchAdminCatalog({
+      companyId: "human",
+      websiteId: "humanbiomedicalcom",
     });
 
-    // 2. Fetch Standalone Master Products from companies/human/products
-    const standaloneProductsPromise = (async () => {
-      let docs = [];
-      let pageToken = "";
-      do {
-        const queryUrl = `${BASE_URL}/companies/human/products?pageSize=300${
-          pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""
-        }`;
-        const data = await fetchRestJson(queryUrl);
-        if (data && data.documents && Array.isArray(data.documents)) {
-          docs.push(...data.documents);
-          pageToken = data.nextPageToken || "";
-        } else {
-          pageToken = "";
-        }
-      } while (pageToken);
-
-      const list = [];
-      docs.forEach((docItem) => {
-        const p = parseFirestoreFields(docItem.fields);
-        if (p.isPublished === false || p.status === "inactive") return;
-        const siteIds = Array.isArray(p.websiteIds)
-          ? p.websiteIds
-          : p.websiteIds
-          ? [p.websiteIds]
-          : [];
-        if (!isWebsiteMatch(siteIds)) return;
-        list.push(normalizeProduct(p));
-      });
-      return list;
-    })();
-
-    // Run parallel queries
-    const [categoryProductsNested, standaloneProducts] = await Promise.all([
-      Promise.all(categoryProductPromises),
-      standaloneProductsPromise,
-    ]);
-
-    const allExtractedProducts = [...categoryProductsNested.flat(), ...standaloneProducts];
-
-    // 3. Fallback: Check Legacy Website Collections if nothing found
-    let legacyProducts = [];
-    if (allExtractedProducts.length === 0) {
-      const [prodRes, legacyCatRes] = await Promise.all([
-        fetchRestJson(`${BASE_URL}/websites/humanbiomedicalcom/pages/products`),
-        fetchRestJson(`${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories`),
-      ]);
-
-      if (prodRes && prodRes.fields) {
-        const parsedData = parseFirestoreFields(prodRes.fields);
-        const allProds = parsedData.products || [];
-        legacyProducts.push(
-          ...allProds
-            .filter((item) => item && item.isPublished !== false)
-            .map((p) => normalizeProduct(p))
-        );
-      }
-
-      if (legacyCatRes && legacyCatRes.documents) {
-        const subPromises = legacyCatRes.documents.map(async (categoryDoc) => {
-          const categoryFields = parseFirestoreFields(categoryDoc.fields);
-          const categoryId = categoryDoc.name.split("/").pop();
-          const subData = await fetchRestJson(
-            `${BASE_URL}/websites/humanbiomedicalcom/pages/categoryproducts/categories/${categoryId}/subcategories`
-          );
-          const docs = subData?.documents || [];
-          const list = [];
-          docs.forEach((subDoc) => {
-            const subFields = parseFirestoreFields(subDoc.fields);
-            (subFields.products || []).forEach((item) => {
-              if (item && item.isPublished !== false) {
-                list.push(
-                  normalizeProduct(item, {
-                    name: categoryFields.category || categoryFields.name,
-                    id: categoryId,
-                  }, {
-                    name: subFields.subCategory || subFields.name,
-                    id: subDoc.name.split("/").pop(),
-                  })
-                );
-              }
-            });
-          });
-          return list;
-        });
-
-        const subResults = await Promise.all(subPromises);
-        legacyProducts.push(...subResults.flat());
-      }
+    if (!Array.isArray(rawCatalog) || rawCatalog.length === 0) {
+      return [];
     }
 
-    // 4. Combine and deduplicate by slug
-    const combined = [...allExtractedProducts, ...legacyProducts];
-    const mapBySlug = new Map();
+    const allProducts = [];
 
-    combined.forEach((item) => {
+    rawCatalog.forEach((item) => {
+      if (!item) return;
+
+      // Handle category objects containing nested subcategories or products
+      if (Array.isArray(item.subcategories) || Array.isArray(item.products)) {
+        const catObj = {
+          id: item.id || slugify(item.name || item.category || ""),
+          name: item.name || item.category || "",
+          slug: item.slug || slugify(item.name || item.category || ""),
+          websiteIds: item.websiteIds || [],
+        };
+
+        if (Array.isArray(item.subcategories)) {
+          item.subcategories.forEach((sub) => {
+            const subObj = {
+              id: sub.id || slugify(sub.name || sub.subCategory || ""),
+              name: sub.name || sub.subCategory || "",
+              slug: sub.slug || slugify(sub.name || sub.subCategory || ""),
+              websiteIds: sub.websiteIds || catObj.websiteIds,
+            };
+
+            (sub.products || []).forEach((p) => {
+              if (p.isPublished === false || p.status === "inactive") return;
+              if (!isWebsiteMatch(p.websiteIds || subObj.websiteIds)) return;
+              const norm = normalizeProduct(p, catObj, subObj);
+              if (norm && norm.title) allProducts.push(norm);
+            });
+          });
+        }
+
+        if (Array.isArray(item.products)) {
+          item.products.forEach((p) => {
+            if (p.isPublished === false || p.status === "inactive") return;
+            if (!isWebsiteMatch(p.websiteIds || catObj.websiteIds)) return;
+            const norm = normalizeProduct(p, catObj);
+            if (norm && norm.title) allProducts.push(norm);
+          });
+        }
+      } else {
+        // Flat product object
+        if (item.isPublished === false || item.status === "inactive") return;
+        if (!isWebsiteMatch(item.websiteIds)) return;
+        const norm = normalizeProduct(item);
+        if (norm && norm.title) allProducts.push(norm);
+      }
+    });
+
+    // Deduplicate by slug
+    const mapBySlug = new Map();
+    allProducts.forEach((item) => {
       const itemTitle = (item.title || item.name || "").trim();
       const itemSlug = (item.slug || slugify(itemTitle)).trim();
       if (itemSlug && !mapBySlug.has(itemSlug)) {
@@ -307,206 +198,114 @@ export async function getAllProducts() {
 
     return Array.from(mapBySlug.values());
   } catch (error) {
-    console.error("Error in getAllProducts:", error);
+    console.error("Error in getAllProducts from SQLite Admin API:", error);
     return [];
   }
 }
 
+/**
+ * Fetch a single product by slug from SQLite Admin API catalog
+ */
 export async function getProductBySlug(slug) {
   if (!slug) return null;
   const products = await getAllProducts();
   const decoded = decodeURIComponent(slug).toLowerCase().trim();
+
   return (
     products.find((item) => {
       const slugMatch = item.slug && item.slug.toLowerCase() === decoded;
       const titleSlugMatch = slugify(item.title) === decoded;
       const titleMatch = item.title && item.title.toLowerCase() === decoded;
       const idMatch = item.id && String(item.id).toLowerCase() === decoded;
-      const prodIdMatch = item.productId && String(item.productId).toLowerCase() === decoded;
-      return slugMatch || titleSlugMatch || titleMatch || idMatch || prodIdMatch;
+      const prodIdMatch =
+        item.productId && String(item.productId).toLowerCase() === decoded;
+      return (
+        slugMatch || titleSlugMatch || titleMatch || idMatch || prodIdMatch
+      );
     }) || null
   );
 }
 
+/**
+ * Categorize all products dynamically
+ */
 export async function getAllCategories() {
   try {
-    const [catData, allProducts] = await Promise.all([
-      fetchRestJson(`${BASE_URL}/companies/human/categories?pageSize=300`),
-      getAllProducts(),
-    ]);
-
-    const catDocs = catData?.documents || [];
+    const allProducts = await getAllProducts();
     const categoriesMap = new Map();
 
-    // 1. Process Master Categories
-    for (const cDoc of catDocs) {
-      const catId = cDoc.name.split("/").pop();
-      const catFields = parseFirestoreFields(cDoc.fields);
-      const cSites = Array.isArray(catFields.websiteIds)
-        ? catFields.websiteIds
-        : catFields.websiteIds
-        ? [catFields.websiteIds]
-        : [];
-
-      const isCatVisible = cSites.length === 0 || isWebsiteMatch(cSites);
-      if (!isCatVisible || catFields.status === "inactive") continue;
-
-      const catName = (catFields.name || catFields.category || catId).trim();
-      const catSlug = catFields.slug || slugify(catName);
-
-      // Fetch subcategories for this category
-      const subData = await fetchRestJson(
-        `${BASE_URL}/companies/human/categories/${catId}/subcategories?pageSize=300`
-      );
-      const subDocs = subData?.documents || [];
-
-      const subcategoriesList = [];
-      const categoryProducts = [];
-
-      subDocs.forEach((sDoc) => {
-        const subId = sDoc.name.split("/").pop();
-        const subFields = parseFirestoreFields(sDoc.fields);
-        const sSites = Array.isArray(subFields.websiteIds)
-          ? subFields.websiteIds
-          : subFields.websiteIds
-          ? [subFields.websiteIds]
-          : cSites;
-
-        const isSubVisible = sSites.length === 0 || isWebsiteMatch(sSites);
-        if (!isSubVisible || subFields.status === "inactive") return;
-
-        const subName = (subFields.name || subFields.subCategory || subId).trim();
-        const subSlug = subFields.slug || slugify(subName);
-
-        const rawProducts = subFields.products || [];
-        const validSubProducts = [];
-
-        rawProducts.forEach((p) => {
-          if (p.isPublished === false || p.status === "inactive") return;
-          const pSites = Array.isArray(p.websiteIds) && p.websiteIds.length > 0 ? p.websiteIds : sSites;
-          if (!isWebsiteMatch(pSites)) return;
-
-          const normalized = normalizeProduct(
-            p,
-            { id: catId, name: catName, slug: catSlug, websiteIds: cSites },
-            { id: subId, name: subName, slug: subSlug, websiteIds: sSites }
-          );
-
-          validSubProducts.push(normalized);
-          categoryProducts.push(normalized);
-        });
-
-        subcategoriesList.push({
-          id: subId,
-          name: subName,
-          slug: subSlug,
-          count: validSubProducts.length,
-          products: validSubProducts.map((p) => ({
-            id: p.id,
-            title: p.title,
-            slug: p.slug,
-            image: p.image,
-            brand: p.brand,
-            model: p.model,
-            price: p.price,
-          })),
-        });
-      });
-
-      // Also add any standalone products belonging to this category
-      allProducts.forEach((prod) => {
-        if (
-          (prod.categoryId && prod.categoryId === catId) ||
-          (prod.category && slugify(prod.category) === catSlug)
-        ) {
-          if (!categoryProducts.some((cp) => cp.slug === prod.slug)) {
-            categoryProducts.push(prod);
-            const subName = (prod.subCategory || "General").trim();
-            const subSlug = slugify(subName);
-            const existingSub = subcategoriesList.find((s) => s.slug === subSlug || s.name === subName);
-            const pSummary = {
-              id: prod.id,
-              title: prod.title,
-              slug: prod.slug,
-              image: prod.image,
-              brand: prod.brand,
-              model: prod.model,
-              price: prod.price,
-            };
-            if (existingSub) {
-              if (!existingSub.products.some((sp) => sp.slug === prod.slug)) {
-                existingSub.count += 1;
-                existingSub.products.push(pSummary);
-              }
-            } else {
-              subcategoriesList.push({
-                id: prod.subcategoryId || subSlug,
-                name: subName,
-                slug: subSlug,
-                count: 1,
-                products: [pSummary],
-              });
-            }
-          }
-        }
-      });
-
-      subcategoriesList.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-
-      categoriesMap.set(catSlug, {
-        id: catId,
-        name: catName,
-        slug: catSlug,
-        count: categoryProducts.length,
-        products: categoryProducts,
-        subcategories: subcategoriesList,
-        websiteIds: cSites,
-      });
-    }
-
-    // 2. Attach any standalone products from other categories not yet in map
     allProducts.forEach((product) => {
-      const catName = (product.category || "").trim();
-      const catSlug = slugify(catName);
-      if (catName && !categoriesMap.has(catSlug)) {
-        const subName = (product.subCategory || "General").trim();
-        const subSlug = slugify(subName);
-        const pSummary = {
-          id: product.id,
-          title: product.title,
-          slug: product.slug,
-          image: product.image,
-          brand: product.brand,
-          model: product.model,
-          price: product.price,
-        };
+      const catName = (product.category || "General Medical Equipment").trim();
+      const catSlug = product.categoryId || slugify(catName);
+
+      if (!categoriesMap.has(catSlug)) {
         categoriesMap.set(catSlug, {
-          id: product.categoryId || catSlug,
+          id: catSlug,
           name: catName,
           slug: catSlug,
-          count: 1,
-          products: [product],
-          subcategories: [
-            {
-              id: product.subcategoryId || subSlug,
-              name: subName,
-              slug: subSlug,
-              count: 1,
-              products: [pSummary],
-            },
-          ],
+          count: 0,
+          products: [],
+          subcategories: [],
           websiteIds: product.websiteIds || [],
+        });
+      }
+
+      const catEntry = categoriesMap.get(catSlug);
+      catEntry.count += 1;
+      catEntry.products.push(product);
+
+      const subName = (product.subCategory || "General").trim();
+      const subSlug = product.subcategoryId || slugify(subName);
+
+      let subEntry = catEntry.subcategories.find(
+        (s) => s.slug === subSlug || s.name.toLowerCase() === subName.toLowerCase()
+      );
+
+      const pSummary = {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        image: product.image,
+        brand: product.brand,
+        model: product.model,
+        price: product.price,
+      };
+
+      if (subEntry) {
+        if (!subEntry.products.some((sp) => sp.slug === product.slug)) {
+          subEntry.count += 1;
+          subEntry.products.push(pSummary);
+        }
+      } else {
+        catEntry.subcategories.push({
+          id: subSlug,
+          name: subName,
+          slug: subSlug,
+          count: 1,
+          products: [pSummary],
         });
       }
     });
 
-    return Array.from(categoriesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // Sort subcategories by count descending
+    categoriesMap.forEach((cat) => {
+      cat.subcategories.sort(
+        (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+      );
+    });
+
+    return Array.from(categoriesMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
   } catch (err) {
     console.error("Error in getAllCategories:", err);
     return [];
   }
 }
 
+/**
+ * Extract all brands dynamically
+ */
 export async function getAllBrands() {
   const products = await getAllProducts();
   const brandsMap = new Map();
@@ -530,5 +329,7 @@ export async function getAllBrands() {
     }
   });
 
-  return Array.from(brandsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  return Array.from(brandsMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 }

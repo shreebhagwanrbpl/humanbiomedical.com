@@ -1,7 +1,9 @@
 import { getAllProducts, getAllCategories, getAllBrands } from "@/lib/data/products";
 import { getAllDistricts } from "@/lib/data/districts";
 
-export const revalidate = 86400; // 24 hours
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function sitemap() {
   const baseUrl = "https://humanbiomedical.com";

@@ -15,7 +15,9 @@ import {
 } from "@/lib/seo/schema";
 
 export const dynamicParams = true;
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export async function generateMetadata({ params }) {
   const { slug, district } = await params;
@@ -93,27 +95,11 @@ export async function generateMetadata({ params }) {
 export default async function ProductPage({ params }) {
   const { slug, district } = await params;
 
-  const rawProduct = await getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
-  const formattedTitle = decodeURIComponent(slug)
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-
-  const product = rawProduct || {
-    id: slug,
-    productId: slug,
-    title: formattedTitle,
-    name: formattedTitle,
-    slug: slug,
-    desc: `${formattedTitle} is supplied and distributed by Human Biomedical LLP. We provide high-precision medical instruments, diagnostic analyzers, and laboratory equipment with genuine warranty, quotation, and nationwide technical support.`,
-    category: "Laboratory Equipment",
-    subCategory: "Diagnostic Instruments",
-    brand: "Human Biomedical",
-    availability: "Available on Inquiry",
-    images: [],
-    image: "",
-  };
+  if (!product) {
+    return notFound();
+  }
 
   let locationName = "India";
 
@@ -378,7 +364,11 @@ export default async function ProductPage({ params }) {
 
             {/* Buttons */}
             <div className="product-btns flex flex-wrap gap-4 items-center">
-              <GetQuoteForm />
+              <GetQuoteForm
+                productName={product.title}
+                productId={product.id}
+                slug={product.slug}
+              />
 
               <DownloadBrochureBtn product={product} />
 

@@ -1,11 +1,10 @@
 "use client";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import toast, { Toaster } from "react-hot-toast";
 import { useState } from "react";
 
-export default function GetQuoteForm() {
+export default function GetQuoteForm({ productName = "Get Quote", productId = "", slug = "" }) {
     const [showForm, setShowForm] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -25,29 +24,36 @@ export default function GetQuoteForm() {
         }
 
         try {
-            await addDoc(
-                collection(
-                    db,
-                    "websitesQueries",
-                    "humanbiomedicalcom",
-                    "productQueries"
-                ),
-                {
+            setSubmitting(true);
+            const res = await fetch("/api/product-query", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
                     email,
                     phone,
-                    productName: "Get Quote",
-                    createdAt: serverTimestamp(),
-                }
-            );
+                    productName: productName || "Get Quote",
+                    productId: productId || "",
+                    slug: slug || "",
+                    websiteId: "humanbiomedicalcom",
+                    companyId: "human",
+                    source: "get_quote_button",
+                }),
+            });
 
-            toast.success("Quote Request Submitted");
-
-            e.target.reset();
-            setShowForm(false);
-
+            if (res.ok) {
+                toast.success("Quote Request Submitted");
+                e.target.reset();
+                setShowForm(false);
+            } else {
+                toast.error("Failed to submit query");
+            }
         } catch (error) {
-            console.error(error);
+            console.error("Quote submit error:", error);
             toast.error("Failed to submit query");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -82,6 +88,7 @@ export default function GetQuoteForm() {
                             top: "80px",
                             left: 0,
                             width: "500px",
+                            maxWidth: "90vw",
                             padding: "25px",
                             background: "#fff",
                             borderRadius: "16px",
@@ -134,16 +141,18 @@ export default function GetQuoteForm() {
                             >
                                 <button
                                     type="submit"
+                                    disabled={submitting}
                                     style={{
                                         background: "#1565d8",
                                         color: "#fff",
                                         border: "none",
                                         padding: "10px 20px",
                                         borderRadius: "8px",
-                                        cursor: "pointer",
+                                        cursor: submitting ? "not-allowed" : "pointer",
+                                        opacity: submitting ? 0.7 : 1,
                                     }}
                                 >
-                                    Submit
+                                    {submitting ? "Submitting..." : "Submit"}
                                 </button>
 
                                 <button

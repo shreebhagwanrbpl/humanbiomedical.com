@@ -1,82 +1,36 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { getAllProducts, getAllCategories } from "@/lib/data/products";
+import { getAllDistricts } from "@/lib/data/districts";
 
-const WEBSITE = "humanbiomedicalcom";
 const DOMAIN = "https://humanbiomedical.com";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 export async function GET() {
-    if (!adminDb) {
-        return new NextResponse(
-            "Firebase Admin is not configured.",
-            {
-                status: 503,
-            }
-        );
-    }
-    try {
-        // Districts
-        const districtSnap = await adminDb
-            .collection("websites")
-            .doc(WEBSITE)
-            .collection("districts")
-            .get();
+  try {
+    const [products, categories, districts] = await Promise.all([
+      getAllProducts(),
+      getAllCategories(),
+      getAllDistricts(),
+    ]);
 
-        const districts = districtSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
+    const publishedProducts = products.filter(
+      (item) => item.isPublished !== false
+    );
 
-        // Products Document
-        const productDoc = await adminDb
-            .collection("websites")
-            .doc(WEBSITE)
-            .collection("pages")
-            .doc("products")
-            .get();
+    // Categories
+    const categoryText =
+      categories.length > 0
+        ? categories
+            .map((cat) => {
+              const productList = (cat.products || [])
+                .map((item) => `- ${item.title}`)
+                .join("\n");
 
-        const productData = productDoc.exists ? productDoc.data() : {};
-
-        const products = productData.products || [];
-
-        // Categories
-        const categorySnap = await adminDb
-            .collection("websites")
-            .doc(WEBSITE)
-            .collection("pages")
-            .doc("categoryproducts")
-            .collection("categories")
-            .get();
-
-        const categories = categorySnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
-
-        // ===========================
-        // Published Products
-        // ===========================
-
-        const publishedProducts = products.filter(
-            (item) => item.isPublished === true
-        );
-
-        // ===========================
-        // Categories
-        // ===========================
-
-        const categoryText =
-            categories.length > 0
-                ? categories
-                    .map((cat) => {
-
-                        const productList =
-                            (cat.products || [])
-                                .map((item) => `- ${item.title}`)
-                                .join("\n");
-
-                        return `
-
-## ${cat.category}
+              return `
+## ${cat.name || cat.category || cat.id}
 
 Category ID:
 ${cat.id}
@@ -87,24 +41,17 @@ ${cat.products?.length || 0}
 Products
 
 ${productList || "No Products"}
-
 `;
+            })
+            .join("\n")
+        : "No Categories Found";
 
-                    })
-                    .join("\n")
-                : "No Categories Found";
-
-        // ===========================
-        // Products
-        // ===========================
-
-        const productText =
-            publishedProducts.length > 0
-                ? publishedProducts
-                    .map((product) => {
-
-                        return `
-
+    // Products
+    const productText =
+      publishedProducts.length > 0
+        ? publishedProducts
+            .map((product) => {
+              return `
 # ${product.title}
 
 Category:
@@ -117,7 +64,7 @@ Model:
 ${product.model || "N/A"}
 
 Description:
-${product.desc || "No description available"}
+${product.desc || product.description || "No description available"}
 
 Instrument:
 ${product.instrument || "N/A"}
@@ -141,45 +88,21 @@ Price:
 ${product.price || "Contact for Price"}
 
 Product URL:
-
-${DOMAIN}/items/${product.slug || product.id}
-
-
-
-
-${[product.title, product.brand, product.category, product.model,
-                            product.instrument,
-                            product.automation,
-                            product.usage,
-                            ]
-                                .filter(Boolean)
-                                .join(", ")
-                            }
+${DOMAIN}/products/${product.slug || product.id}
 `;
-                    })
-                    .join("\n")
-                : "No Products Found";
+            })
+            .join("\n")
+        : "No Products Found";
 
+    // Districts
+    const districtText =
+      districts.length > 0
+        ? districts
+            .map((item) => `${DOMAIN}/${item.slug}`)
+            .join("\n")
+        : "No Districts Found";
 
-        // ===========================
-        // Districts
-        // ===========================
-
-        const districtText =
-            districts.length > 0
-                ? districts
-                    .map(
-                        (item) =>
-                            `${DOMAIN}/${item.slug}`
-                    )
-                    .join("\n")
-                : "No Districts Found";
-
-        // ===========================
-        // llms.txt
-        // ===========================
-
-        const content = `
+    const content = `
 ## Statistics
 
 Products:
@@ -190,9 +113,10 @@ ${categories.length}
 
 Districts:
 ${districts.length}
-# humanbiomedicalcom
 
-India's Trusted Biomedical Equipment Company
+# Human Biomedical LLP
+
+India's Trusted Biomedical & Laboratory Equipment Partner
 
 Website
 
@@ -209,45 +133,21 @@ ${categories.length}
 District Pages
 
 ${districts.length}
+
 Company
 
-humanbiomedicalcom is one of India's trusted Biomedical Equipment suppliers.
+Human Biomedical LLP is one of India's trusted Biomedical & Laboratory Equipment suppliers.
 
 Services
 
-- Biomedical Equipment Supply
-- Laboratory Equipment
-- Diagnostic Equipment
-- Installation
-- AMC
-- Calibration
-- Repair
-- Technical Support
-- Pan India Delivery
+- Laboratory Instruments Supply
+- Diagnostic Analyzers
+- Hospital & ICU Equipment
+- Installation & Turnkey Setup
+- AMC & Technical Maintenance
+- Calibration & Support
+- Pan-India Delivery
 
-Search Keywords
-
-Biomedical Equipment
-
-Laboratory Equipment
-
-Diagnostic Equipment
-
-Hospital Equipment
-
-Medical Equipment
-
-ICU Equipment
-
-Operation Theatre Equipment
-
-Biochemistry Analyzer
-
-Electrolyte Analyzer
-
-CLIA Analyzer
-
-Immunoassay Analyzer
 ------------------------------------------------
 
 ## Categories
@@ -279,27 +179,28 @@ ${DOMAIN}/robots.txt
 Contact
 
 ${DOMAIN}/contact
+
 Last Updated
 
 ${new Date().toISOString()}
-
 `;
-        return new NextResponse(content, {
-            headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-                "Cache-Control": "public,max-age=3600",
-            },
-        });
-    } catch (e) {
-        return NextResponse.json(
-            {
-                success: false,
-                error: e.message,
-            },
-            {
-                status: 500,
-            }
-        );
-    }
 
+    return new NextResponse(content, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
+  } catch (e) {
+    console.error("API /llms.txt error:", e);
+    return NextResponse.json(
+      {
+        success: false,
+        error: e.message,
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }

@@ -1,6 +1,10 @@
 import "./home.css";
 import { getHomePageData } from "@/lib/data/pages";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 import Homeimg from "./img/Homeimg.jpg";
 import heroimg from "./img/heroimg.jpg";
 import Image from "next/image";
@@ -152,29 +156,26 @@ export default async function Home({ districtData }) {
               Human Biomedical LLP – Leading Equipment Partner in {location}
             </span>
 
-            <h1>
-              {savedData.title || (
-                <>
-                  Empowering Healthcare with <span>Precision Medical Systems</span>
-                </>
-              )}
-            </h1>
+            {savedData.title ? <h1>{savedData.title}</h1> : null}
 
-            <p>
-              {savedData.description ||
-                `Human Biomedical LLP is a trusted supplier of laboratory and hospital equipment, providing high-quality medical instruments, diagnostic systems, pathology analyzers, ICU & OT equipment, laboratory consumables, and healthcare solutions for hospitals, diagnostic centres, research laboratories, and clinics in ${location}.`}
-            </p>
+            {savedData.description ? <p>{savedData.description}</p> : null}
 
-            <div className="hero-buttons">
-              <Link href={getProductUrl()} className="primary-btn flex items-center gap-2">
-                <span>{savedData.button1Text || "Explore Products"}</span>
-                <ArrowRight size={18} />
-              </Link>
+            {(savedData.button1Text || savedData.button2Text) ? (
+              <div className="hero-buttons">
+                {savedData.button1Text ? (
+                  <Link href={getProductUrl()} className="primary-btn flex items-center gap-2">
+                    <span>{savedData.button1Text}</span>
+                    <ArrowRight size={18} />
+                  </Link>
+                ) : null}
 
-              <Link href={getContactUrl()} className="secondary-btn flex items-center gap-2">
-                <span>{savedData.button2Text || "Request Quote"}</span>
-              </Link>
-            </div>
+                {savedData.button2Text ? (
+                  <Link href={getContactUrl()} className="secondary-btn flex items-center gap-2">
+                    <span>{savedData.button2Text}</span>
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* Quick Badges */}
             <div className="hero-highlights">

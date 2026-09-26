@@ -11,16 +11,10 @@ import {
 } from "react-icons/fa";
 import "./footer.css";
 
-const DEFAULT_CONTACT_INFO = [
-  { label: "Address", value: "Unit S-1, 2nd Floor, Pn 16, D Block, Tagore Nagar, Vaishali Nagar, Jaipur, Rajasthan 302021" },
-  { label: "Phone", value: "+91 98290 12345" },
-  { label: "Email", value: "info@humanbiomedical.com" },
-];
-
 export default function Footer({
   districtData,
 }) {
-  const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT_INFO);
+  const [contactInfo, setContactInfo] = useState([]);
   const [stateName, setStateName] = useState("");
   const params = useParams();
 
@@ -59,35 +53,37 @@ export default function Footer({
   useEffect(() => {
     const loadData = async () => {
       try {
-        const BASE_URL = "https://firestore.googleapis.com/v1/projects/rajbiosis-central/databases/(default)/documents";
-
         // Fetch contact info
-        const contactRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/pages/contact`);
+        const contactRes = await fetch(
+          `/api/site-data?type=contact&companyId=human&websiteId=humanbiomedicalcom&t=${Date.now()}`
+        );
         if (contactRes.ok) {
-          const contactData = await contactRes.json();
-          const rawItems = contactData.fields?.contactInfo?.arrayValue?.values || [];
-          const parsed = rawItems.map((item) => ({
-            label: item.mapValue?.fields?.label?.stringValue || "",
-            value: item.mapValue?.fields?.value?.stringValue || "",
-          }));
-          if (parsed.length > 0) {
-            setContactInfo(parsed);
+          const json = await contactRes.json();
+          const data = json.data;
+          if (data && Array.isArray(data.contactInfo)) {
+            setContactInfo(data.contactInfo);
+          } else if (Array.isArray(data)) {
+            setContactInfo(data);
           }
         }
 
         // District State
         if (district) {
-          const distRes = await fetch(`${BASE_URL}/websites/humanbiomedicalcom/districts/${encodeURIComponent(district.toLowerCase())}`);
+          const distRes = await fetch(
+            `/api/site-data?type=district&district=${encodeURIComponent(
+              district.toLowerCase()
+            )}&companyId=human&websiteId=humanbiomedicalcom&t=${Date.now()}`
+          );
           if (distRes.ok) {
-            const distData = await distRes.json();
-            const state = distData.fields?.state?.stringValue;
-            if (state) {
-              setStateName(state);
+            const distJson = await distRes.json();
+            const dData = distJson.data;
+            if (dData && dData.state) {
+              setStateName(dData.state);
             }
           }
         }
       } catch (err) {
-        // Silently fall back to DEFAULT_CONTACT_INFO
+        // Silently handle
       }
     };
 
@@ -103,6 +99,7 @@ export default function Footer({
       )?.value || ""
     );
   };
+
   return (
     <footer className="footer">
       <div className="container-custom">
@@ -126,41 +123,14 @@ export default function Footer({
             </p>
 
             <div className="social-icons">
-              {/* <a
-                href="https://www.facebook.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-              >
-                <FaFacebookF />
-              </a> */}
-
-              {<a
+              <a
                 href="https://www.instagram.com/humanbiomedicals/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
               >
                 <FaInstagram />
-              </a>}
-
-              {/* <a
-                href="https://www.linkedin.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-              >
-                <FaLinkedinIn />
-              </a> */}
-
-              {/* <a
-                href="https://www.youtube.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="YouTube"
-              >
-                <FaYoutube />
-              </a> */}
+              </a>
             </div>
 
           </div>
@@ -225,7 +195,7 @@ export default function Footer({
             <h3>Contact Info</h3>
 
             <p>
-              📍 {getValue("address")}
+              📍 {getValue("address") || Office}
             </p>
 
             <p>
