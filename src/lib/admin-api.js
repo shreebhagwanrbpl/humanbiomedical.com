@@ -1,82 +1,84 @@
 /**
- * SQLite Admin API Client for Human Biomedical LLP
- * Backend URL Fallback Setup:
- * ADMIN_API_BASE_URL || ADMIN_API_URL || SQLITE_ADMIN_API_URL || "https://admin.rajbiosis.app"
+ * Human Biomedical website -> SuperAdmin MongoDB API client.
+ *
+ * The website never connects to MongoDB directly. All reads/writes go through
+ * the existing SuperAdmin API so MongoDB credentials remain on the Admin VPS.
  */
+
+export const DEFAULT_COMPANY_ID = "human";
+export const DEFAULT_WEBSITE_ID = "humanbiomedicalcom";
+export const DEFAULT_ADMIN_API_BASE_URL = "https://admin.rajbiosis.app";
 
 export function getAdminApiBaseUrl() {
   const url =
     process.env.ADMIN_API_BASE_URL ||
     process.env.ADMIN_API_URL ||
-    process.env.SQLITE_ADMIN_API_URL ||
-    process.env.NEXT_PUBLIC_ADMIN_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_ADMIN_API_URL ||
-    process.env.NEXT_PUBLIC_SQLITE_ADMIN_API_URL ||
-    "https://admin.rajbiosis.app";
+    DEFAULT_ADMIN_API_BASE_URL;
 
   return url.replace(/\/+$/, "");
 }
 
-export const DEFAULT_COMPANY_ID = "human";
-export const DEFAULT_WEBSITE_ID = "humanbiomedicalcom";
-
-/**
- * Normalizes a string or domain to alphanumeric identifier
- */
 export function normalizeWebsiteId(str = "") {
   if (!str || typeof str !== "string") return DEFAULT_WEBSITE_ID;
   return str
     .toLowerCase()
+    .trim()
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "")
     .replace(/[^a-z0-9]/g, "");
 }
 
+function noCacheFetch(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+      Pragma: "no-cache",
+      ...(options.headers || {}),
+    },
+  });
+}
+
+async function readJson(url, options) {
+  const response = await noCacheFetch(url, options);
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  if (!response.ok) {
+    console.error(`[admin-api] ${response.status} from ${url}`, body);
+    return null;
+  }
+  return body;
+}
+
 /**
- * Fetch master catalog from SQLite Admin API
- * Endpoint: /api/catalog?companyId=...&websiteId=...
+ * Reads the master catalog from SuperAdmin's MongoDB-backed collection API.
+ * Admin route: /api/[org]/catalog
  */
 export async function fetchAdminCatalog({
   companyId = DEFAULT_COMPANY_ID,
   websiteId = DEFAULT_WEBSITE_ID,
 } = {}) {
   const baseUrl = getAdminApiBaseUrl();
-  const normWebsiteId = normalizeWebsiteId(websiteId);
-  const targetUrl = `${baseUrl}/api/catalog?companyId=${encodeURIComponent(
-    companyId
-  )}&websiteId=${encodeURIComponent(normWebsiteId)}`;
+  const siteId = normalizeWebsiteId(websiteId);
+  const url = `${baseUrl}/api/${encodeURIComponent(companyId)}/catalog?websiteId=${encodeURIComponent(siteId)}`;
+  const json = await readJson(url);
 
-  try {
-    const res = await fetch(targetUrl, {
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
-        Pragma: "no-cache",
-      },
-    });
-
-    if (!res.ok) {
-      console.warn(`[admin-api] Catalog fetch returned status ${res.status} for ${targetUrl}`);
-      return [];
-    }
-
-    const json = await res.json();
-    if (json && json.success) {
-      if (Array.isArray(json.products)) return json.products;
-      if (Array.isArray(json.data)) return json.data;
-    }
-    if (Array.isArray(json)) return json;
-    return [];
-  } catch (err) {
-    console.error(`[admin-api] Error fetching catalog from ${targetUrl}:`, err.message);
-    return [];
-  }
+  if (!json?.success) return [];
+  // The MongoDB collection API returns products and categories separately.
+  if (Array.isArray(json.products)) return json.products;
+  if (Array.isArray(json.data)) return json.data;
+  return [];
 }
 
 /**
- * Fetch dynamic site data from SQLite Admin API
- * Endpoint: /api/site-data?type=...&companyId=...&websiteId=...
+ * Reads page content from SuperAdmin's MongoDB pages collection.
+ * Admin route: /api/[org]/site-data
  */
 export async function fetchAdminSiteData({
   type = "home",
@@ -86,145 +88,88 @@ export async function fetchAdminSiteData({
   district = "",
 } = {}) {
   const baseUrl = getAdminApiBaseUrl();
-  const normWebsiteId = normalizeWebsiteId(websiteId);
-  let targetUrl = `${baseUrl}/api/site-data?type=${encodeURIComponent(
-    type
-  )}&companyId=${encodeURIComponent(companyId)}&websiteId=${encodeURIComponent(
-    normWebsiteId
-  )}`;
+  const siteId = normalizeWebsiteId(websiteId);
 
-  if (page) targetUrl += `&page=${encodeURIComponent(page)}`;
-  if (district) targetUrl += `&district=${encodeURIComponent(district)}`;
-
-  try {
-    const res = await fetch(targetUrl, {
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
-        Pragma: "no-cache",
-      },
+  // District data is still maintained through the Admin's legacy website
+  // document structure, which is also backed by the Admin MongoDB adapter.
+  if (type === "districts" || type === "district") {
+    const params = new URLSearchParams({
+      type,
+      companyId,
+      websiteId: siteId,
     });
-
-    if (!res.ok) {
-      console.warn(`[admin-api] Site-data fetch returned status ${res.status} for ${targetUrl}`);
-      return null;
-    }
-
-    const json = await res.json();
-    if (json && json.success) {
-      if (type === "districts" && Array.isArray(json.districts)) {
-        return json.districts;
-      }
-      return json.data !== undefined ? json.data : json;
-    }
-    return null;
-  } catch (err) {
-    console.error(`[admin-api] Error fetching site-data from ${targetUrl}:`, err.message);
-    return null;
+    if (district) params.set("district", district);
+    const legacyUrl = `${baseUrl}/api/site-data?${params.toString()}`;
+    const legacyJson = await readJson(legacyUrl);
+    if (!legacyJson?.success) return null;
+    return legacyJson.data !== undefined ? legacyJson.data : legacyJson.districts ?? null;
   }
+
+  const requestedPage = page || type;
+  const params = new URLSearchParams({ websiteId: siteId });
+  if (requestedPage) params.set("page", requestedPage);
+
+  const url = `${baseUrl}/api/${encodeURIComponent(companyId)}/site-data?${params.toString()}`;
+  const json = await readJson(url);
+  if (!json?.success) return null;
+
+  if (requestedPage) return json.data ?? null;
+  return json.pages ?? json;
 }
 
-/**
- * Fetch districts list from SQLite Admin API
- */
 export async function fetchAdminDistricts({
   companyId = DEFAULT_COMPANY_ID,
   websiteId = DEFAULT_WEBSITE_ID,
 } = {}) {
-  const data = await fetchAdminSiteData({
-    type: "districts",
-    companyId,
-    websiteId,
-  });
-
+  const data = await fetchAdminSiteData({ type: "districts", companyId, websiteId });
   if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.districts)) return data.districts;
+  if (Array.isArray(data?.districts)) return data.districts;
   return [];
 }
 
-/**
- * Fetch single district details from SQLite Admin API
- */
 export async function fetchAdminDistrict({
   district = "",
   companyId = DEFAULT_COMPANY_ID,
   websiteId = DEFAULT_WEBSITE_ID,
 } = {}) {
   if (!district) return null;
-  return await fetchAdminSiteData({
-    type: "district",
-    district,
-    companyId,
+  return fetchAdminSiteData({ type: "district", district, companyId, websiteId });
+}
+
+/**
+ * Sends contact and product enquiries to the Admin MongoDB queries collection.
+ * Admin route: POST /api/[org]/query?websiteId=...
+ */
+async function submitAdminQuery(data = {}, type = "contact") {
+  const baseUrl = getAdminApiBaseUrl();
+  const websiteId = normalizeWebsiteId(data.websiteId || DEFAULT_WEBSITE_ID);
+  const url = `${baseUrl}/api/${encodeURIComponent(data.companyId || DEFAULT_COMPANY_ID)}/query?websiteId=${encodeURIComponent(websiteId)}`;
+
+  const payload = {
+    ...data,
+    type,
+    companyId: data.companyId || DEFAULT_COMPANY_ID,
     websiteId,
+    createdAt: data.createdAt || new Date().toISOString(),
+  };
+
+  const json = await readJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
+
+  if (json?.ok || json?.success) return { success: true, ...json };
+  return {
+    success: false,
+    message: "Unable to submit your enquiry. Please try again.",
+  };
 }
 
-/**
- * Submit contact query to SQLite Admin API
- */
-export async function submitAdminContactQuery(data = {}) {
-  const baseUrl = getAdminApiBaseUrl();
-  const targetUrl = `${baseUrl}/api/contact-query`;
-
-  const payload = {
-    ...data,
-    companyId: data.companyId || DEFAULT_COMPANY_ID,
-    websiteId: normalizeWebsiteId(data.websiteId || DEFAULT_WEBSITE_ID),
-    createdAt: data.createdAt || new Date().toISOString(),
-  };
-
-  try {
-    const res = await fetch(targetUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-    const errText = await res.text();
-    console.warn(`[admin-api] Contact query submission response (${res.status}):`, errText);
-    return { success: true, message: "Contact query recorded", status: res.status };
-  } catch (err) {
-    console.error(`[admin-api] Error submitting contact query to ${targetUrl}:`, err.message);
-    return { success: true, message: "Contact query queued", error: err.message };
-  }
+export function submitAdminContactQuery(data = {}) {
+  return submitAdminQuery(data, "contact");
 }
 
-/**
- * Submit product query / quote enquiry to SQLite Admin API
- */
-export async function submitAdminProductQuery(data = {}) {
-  const baseUrl = getAdminApiBaseUrl();
-  const targetUrl = `${baseUrl}/api/product-query`;
-
-  const payload = {
-    ...data,
-    companyId: data.companyId || DEFAULT_COMPANY_ID,
-    websiteId: normalizeWebsiteId(data.websiteId || DEFAULT_WEBSITE_ID),
-    createdAt: data.createdAt || new Date().toISOString(),
-  };
-
-  try {
-    const res = await fetch(targetUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-    const errText = await res.text();
-    console.warn(`[admin-api] Product query submission response (${res.status}):`, errText);
-    return { success: true, message: "Product query recorded", status: res.status };
-  } catch (err) {
-    console.error(`[admin-api] Error submitting product query to ${targetUrl}:`, err.message);
-    return { success: true, message: "Product query queued", error: err.message };
-  }
+export function submitAdminProductQuery(data = {}) {
+  return submitAdminQuery(data, "product");
 }

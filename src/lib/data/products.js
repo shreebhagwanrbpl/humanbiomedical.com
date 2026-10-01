@@ -33,15 +33,42 @@ export function slugify(text) {
     .replace(/\-\-+/g, "-");
 }
 
-export function normalizeProduct(p, parentCat = {}, parentSub = {}) {
-  if (!p) return null;
+export function normalizeProduct(rawP, parentCat = {}, parentSub = {}) {
+  if (!rawP) return null;
+
+  const p = rawP.data
+    ? {
+        ...rawP.data,
+        ...rawP,
+        category: rawP.data.category || rawP.category || "",
+        subCategory:
+          rawP.data.subCategory ||
+          rawP.data.subcategory ||
+          rawP.subCategory ||
+          rawP.subcategory ||
+          "",
+        brand: rawP.data.brand || rawP.brand || "",
+        model: rawP.data.model || rawP.model || "",
+        usage: rawP.data.usage || rawP.usage || "",
+        desc: rawP.data.desc || rawP.data.description || rawP.desc || rawP.description || "",
+        description: rawP.data.description || rawP.data.desc || rawP.description || rawP.desc || "",
+        price: rawP.data.price || rawP.price || "",
+        capacity: rawP.data.capacity || rawP.capacity || "",
+        throughput: rawP.data.throughput || rawP.throughput || "",
+        instrument: rawP.data.instrument || rawP.instrument || "",
+        parameters: rawP.data.parameters || rawP.parameters || "",
+        automation: rawP.data.automation || rawP.automation || "",
+        availability: rawP.data.availability || rawP.availability || "In Stock",
+        size: rawP.data.size || rawP.size || "",
+      }
+    : rawP;
 
   const catName = (
     parentCat.name ||
     parentCat.category ||
     p.category ||
     p.categoryName ||
-    ""
+    "General Medical Equipment"
   ).trim();
   const catId = parentCat.id || p.categoryId || slugify(catName);
 
@@ -51,7 +78,7 @@ export function normalizeProduct(p, parentCat = {}, parentSub = {}) {
     p.subCategory ||
     p.subcategory ||
     p.subCategoryName ||
-    ""
+    "General"
   ).trim();
   const subId = parentSub.id || p.subcategoryId || slugify(subName);
 
@@ -119,7 +146,7 @@ export function normalizeProduct(p, parentCat = {}, parentSub = {}) {
 }
 
 /**
- * Fetch all products from SQLite Admin API
+ * Fetch all products from SuperAdmin MongoDB API
  */
 export async function getAllProducts() {
   try {
@@ -134,8 +161,21 @@ export async function getAllProducts() {
 
     const allProducts = [];
 
-    rawCatalog.forEach((item) => {
-      if (!item) return;
+    rawCatalog.forEach((rawItem) => {
+      if (!rawItem) return;
+      const item = rawItem?.data
+        ? {
+            ...rawItem.data,
+            ...rawItem,
+            category: rawItem.data.category || rawItem.category || "",
+            subCategory:
+              rawItem.data.subCategory ||
+              rawItem.data.subcategory ||
+              rawItem.subCategory ||
+              rawItem.subcategory ||
+              "",
+          }
+        : rawItem;
 
       // Handle category objects containing nested subcategories or products
       if (Array.isArray(item.subcategories) || Array.isArray(item.products)) {
@@ -147,7 +187,8 @@ export async function getAllProducts() {
         };
 
         if (Array.isArray(item.subcategories)) {
-          item.subcategories.forEach((sub) => {
+          item.subcategories.forEach((rawSub) => {
+            const sub = rawSub?.data ? { ...rawSub.data, ...rawSub } : rawSub;
             const subObj = {
               id: sub.id || slugify(sub.name || sub.subCategory || ""),
               name: sub.name || sub.subCategory || "",
@@ -156,9 +197,10 @@ export async function getAllProducts() {
             };
 
             (sub.products || []).forEach((p) => {
-              if (p.isPublished === false || p.status === "inactive") return;
-              if (!isWebsiteMatch(p.websiteIds || subObj.websiteIds)) return;
-              const norm = normalizeProduct(p, catObj, subObj);
+              const unp = p?.data ? { ...p.data, ...p } : p;
+              if (unp.isPublished === false || unp.status === "inactive") return;
+              if (!isWebsiteMatch(unp.websiteIds || subObj.websiteIds)) return;
+              const norm = normalizeProduct(unp, catObj, subObj);
               if (norm && norm.title) allProducts.push(norm);
             });
           });
@@ -166,9 +208,10 @@ export async function getAllProducts() {
 
         if (Array.isArray(item.products)) {
           item.products.forEach((p) => {
-            if (p.isPublished === false || p.status === "inactive") return;
-            if (!isWebsiteMatch(p.websiteIds || catObj.websiteIds)) return;
-            const norm = normalizeProduct(p, catObj);
+            const unp = p?.data ? { ...p.data, ...p } : p;
+            if (unp.isPublished === false || unp.status === "inactive") return;
+            if (!isWebsiteMatch(unp.websiteIds || catObj.websiteIds)) return;
+            const norm = normalizeProduct(unp, catObj);
             if (norm && norm.title) allProducts.push(norm);
           });
         }
@@ -198,13 +241,13 @@ export async function getAllProducts() {
 
     return Array.from(mapBySlug.values());
   } catch (error) {
-    console.error("Error in getAllProducts from SQLite Admin API:", error);
+    console.error("Error in getAllProducts from SuperAdmin MongoDB API:", error);
     return [];
   }
 }
 
 /**
- * Fetch a single product by slug from SQLite Admin API catalog
+ * Fetch a single product by slug from SuperAdmin MongoDB API catalog
  */
 export async function getProductBySlug(slug) {
   if (!slug) return null;

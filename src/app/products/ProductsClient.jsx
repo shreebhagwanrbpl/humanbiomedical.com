@@ -149,7 +149,7 @@ export default function ProductsClient({ initialProducts = [], initialCategories
   const groupedProducts = useMemo(() => {
     const obj = {};
     filteredProducts.forEach((item) => {
-      const category = item.category || "Other Products";
+      const category = item.category || "General Medical Equipment";
       const subCategory = item.subCategory || "General";
       if (!obj[category]) obj[category] = {};
       if (!obj[category][subCategory]) obj[category][subCategory] = [];
@@ -161,8 +161,8 @@ export default function ProductsClient({ initialProducts = [], initialCategories
   const sortedGroupedProducts = useMemo(() => {
     const entries = Object.entries(groupedProducts);
     entries.sort(([a], [b]) => {
-      if (a === "Other Products") return 1;
-      if (b === "Other Products") return -1;
+      if (a === "General Medical Equipment" || a === "Other Products") return 1;
+      if (b === "General Medical Equipment" || b === "Other Products") return -1;
       return a.localeCompare(b);
     });
     return Object.fromEntries(entries);
@@ -177,13 +177,11 @@ export default function ProductsClient({ initialProducts = [], initialCategories
         ([subCategory]) => !openedSubcategory || subCategory === openedSubcategory
       );
 
-      // If openedSubcategory had no matches under active search/filters, fallback to all matching subcategories in this category
+      // If openedSubcategory had no matches or none was selected, show all subcategories in this category
       const effectiveSubEntries =
         subCategoryEntries.length > 0
           ? subCategoryEntries
-          : productSearch || selectedBrand || selectedUsage
-            ? Object.entries(subCategories)
-            : [];
+          : Object.entries(subCategories);
 
       const totalCategoryCount = effectiveSubEntries.reduce(
         (acc, [, prods]) => acc + prods.length,
@@ -198,6 +196,25 @@ export default function ProductsClient({ initialProducts = [], initialCategories
         });
       }
     });
+
+    // Fallback: If no category matched openedCategory, show all matching categories
+    if (result.length === 0 && Object.keys(sortedGroupedProducts).length > 0) {
+      Object.entries(sortedGroupedProducts).forEach(([category, subCategories]) => {
+        const effectiveSubEntries = Object.entries(subCategories);
+        const totalCategoryCount = effectiveSubEntries.reduce(
+          (acc, [, prods]) => acc + prods.length,
+          0
+        );
+        if (effectiveSubEntries.length > 0 && totalCategoryCount > 0) {
+          result.push({
+            category,
+            subCategoryEntries: effectiveSubEntries,
+            totalCategoryCount,
+          });
+        }
+      });
+    }
+
     return result;
   }, [sortedGroupedProducts, openedCategory, openedSubcategory, productSearch, selectedBrand, selectedUsage]);
 

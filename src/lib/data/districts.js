@@ -42,7 +42,7 @@ export async function getAllDistricts() {
       return districts;
     }
   } catch (error) {
-    console.error("Error fetching districts from SQLite Admin API:", error.message);
+    console.error("Error fetching districts from SuperAdmin MongoDB API:", error.message);
   }
 
   if (districtCache) return districtCache;

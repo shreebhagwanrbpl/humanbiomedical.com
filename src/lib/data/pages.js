@@ -21,7 +21,7 @@ export async function getHomePageData() {
       };
     }
   } catch (error) {
-    console.error("Error fetching home page data from SQLite Admin API:", error.message);
+    console.error("Error fetching home page data from SuperAdmin MongoDB API:", error.message);
   }
 
   return {
@@ -55,7 +55,7 @@ export async function getServicesPageData() {
       };
     }
   } catch (error) {
-    console.error("Error fetching services page data from SQLite Admin API:", error.message);
+    console.error("Error fetching services page data from SuperAdmin MongoDB API:", error.message);
   }
 
   return {
@@ -92,7 +92,7 @@ export async function getContactPageData() {
       };
     }
   } catch (error) {
-    console.error("Error fetching contact page data from SQLite Admin API:", error.message);
+    console.error("Error fetching contact page data from SuperAdmin MongoDB API:", error.message);
   }
 
   return {
