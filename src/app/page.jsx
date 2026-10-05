@@ -1,5 +1,6 @@
 import "./home.css";
 import { getHomePageData } from "@/lib/data/pages";
+import { getAllProducts } from "@/lib/data/products";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,8 @@ export async function generateMetadata({ params }) {
 
 export default async function Home({ districtData }) {
   const savedData = await getHomePageData();
+  const allProducts = await getAllProducts();
+  const featuredProducts = (allProducts || []).slice(0, 6);
   const location = districtData?.district || "India";
 
   const schemaData = {
@@ -313,6 +316,75 @@ export default async function Home({ districtData }) {
                 <ChevronRight size={16} />
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DYNAMIC FEATURED PRODUCTS SECTION */}
+      <section className="featured-products-home">
+        <div className="container-custom">
+          <div className="section-heading">
+            <span>Featured Equipment</span>
+            <h2>Popular Laboratory & Diagnostic Systems</h2>
+            <p className="section-subtext">
+              Explore high-precision medical analyzers, pathology testing kits, and clinical devices supplied across {location}.
+            </p>
+          </div>
+
+          <div className="featured-products-grid">
+            {featuredProducts.map((p) => {
+              const itemSlug = p.slug || "";
+              const itemUrl = districtData?.slug ? `/${districtData.slug}/products/${itemSlug}` : `/products/${itemSlug}`;
+              const imgUrl = p.images?.[0] || p.image || "/placeholder.jpg";
+
+              return (
+                <div key={p.id || itemSlug} className="product-card-home">
+                  <div className="product-card-img-wrap">
+                    <img
+                      src={imgUrl}
+                      alt={p.title}
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = "/placeholder.jpg"; }}
+                    />
+                    <span className="product-cat-pill">{p.category || "Biomedical"}</span>
+                  </div>
+
+                  <div className="product-card-body">
+                    <h3>{p.title}</h3>
+                    <p className="product-card-desc">{p.desc || p.description || "High-precision diagnostic equipment designed for clinical laboratories and healthcare centers."}</p>
+
+                    <div className="product-card-specs">
+                      {p.brand ? (
+                        <div className="spec-badge">
+                          <span className="spec-label">Brand:</span>
+                          <span className="spec-val">{p.brand}</span>
+                        </div>
+                      ) : null}
+                      {p.capacity ? (
+                        <div className="spec-badge">
+                          <span className="spec-label">Capacity:</span>
+                          <span className="spec-val">{p.capacity}</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="product-card-footer">
+                      <Link href={itemUrl} className="view-details-btn">
+                        <span>View Details</span>
+                        <ArrowRight size={16} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="view-all-products-wrap">
+            <Link href={getProductUrl()} className="primary-btn flex items-center gap-2">
+              <span>View All Products ({allProducts.length})</span>
+              <ArrowRight size={18} />
+            </Link>
           </div>
         </div>
       </section>
